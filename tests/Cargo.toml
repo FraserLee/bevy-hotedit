@@ -1,0 +1,9 @@
+[package]
+name = "bevy_hotedit_test"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+bevy = "0.7"
+bevy_hotedit = { path = "../bevy_hotedit" }

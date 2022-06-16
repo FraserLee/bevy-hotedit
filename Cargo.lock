@@ -420,8 +420,13 @@ dependencies = [
 [[package]]
 name = "bevy_hotedit"
 version = "0.1.0"
+
+[[package]]
+name = "bevy_hotedit_test"
+version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_hotedit",
 ]
 
 [[package]]
