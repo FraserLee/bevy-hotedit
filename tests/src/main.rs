@@ -14,8 +14,6 @@ use bevy_hotedit::*;
 }
 
 
-
-
 #[hot] const FLOAT_CONST1: f32;
 #[hot] const FLOAT_CONST2: f64;
 #[test] fn float_const_load_test() {
@@ -49,7 +47,6 @@ fn bevy_test() {
 }
 
         
-// fn main() { println!("run `cargo test` to test"); }
 
 #[hot] const FOOBAR: i32;
 
@@ -63,39 +60,8 @@ fn main() {
         .run();
 }
 
-/*
 
-use bevy::app::ScheduleRunnerSettings;
-use bevy::utils::Duration;
-use std::sync::Mutex;
-        
-#[macro_use]
-extern crate lazy_static;
-
-lazy_static! {
-    static ref SECONDS: Mutex<usize> = Mutex::new(0);
-}
-        
-fn main() {        
-    App::new()
-        .add_plugins(MinimalPlugins)
-        .add_startup_system( || {
-            println!("run `cargo test` to test");
-        }).add_system(|time: Res<Time>| {
-        // set the seconds to the current time
-        let mut seconds = SECONDS.lock().unwrap();
-        *seconds = time.seconds_since_startup() as usize;
-
-           
-   
-        }).add_system(|| {
-
-            println!("{}", SECONDS.lock().unwrap());
-
-        }).run();
-}
-
-*/
+// fn main() { println!("run `cargo test` to test"); }
 
 
 

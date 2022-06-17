@@ -19,12 +19,13 @@ test with `cargo test` from project root.
  - [x] read consts from toml
      - [x] tests, find out how test environment works
 
- - [ ] live-refresh
+ - [x] live-refresh
      - [x] const -> function switch
      - [x] function lookup from file
-         - [ ] cache w/ filesystem based invalidation
-     - [ ] release-build replace with consts
-     - [ ] tests
+         - [x] cache w/ filesystem based invalidation
+     - [x] release-build replace with consts
+     - [ ] tests (rework first batch into single write)
+     - [ ] tests (bevy systems, edit file)
 
  - [x] auto-write consts to toml
      - [ ] auto-gen non-existent file

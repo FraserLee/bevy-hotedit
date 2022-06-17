@@ -11,10 +11,6 @@ use toml::{ self, Value, value::Table };
 
 
 
-
-
-
-
 #[proc_macro_attribute]
 pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
     
@@ -95,20 +91,14 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
             #[inline]
             #[allow(non_snake_case)]
             fn #iden() -> #ty {
-                if !cfg!(debug_assertions) { return #value; }
-
-                // fetch the value from the toml file in real-time
-                let file_t: Table = toml::from_str(
-                    &std::fs::read_to_string("src/hotedit-values.toml").unwrap()
-                ).unwrap();
-
-                let v = file_t[#name].clone();
-
-                return v #conversion;
+                // either return the const value (release build) 
+                // or look it up from the toml (debug build)
+                if !cfg!(debug_assertions) { #value }
+                else { lookup(#name) #conversion }
             }
         }.into();
 
-        println!("new_item: \"{}\"", new_item.to_string());
+        // println!("new_item: \"{}\"", new_item.to_string());
 
         return new_item;
     }
@@ -117,9 +107,11 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
 
 }
 
+
 // dumb trick, this won't work soon. No way to do enums or anything cool.
 // Still it'll work for the moment.
 fn parse_value(line: &str) -> Value {
     let value = line.split("=").skip(1).next().unwrap().split(";").next().unwrap().trim();
     format!("test = {}\n", value).parse::<Value>().unwrap()["test"].clone()
 }
+

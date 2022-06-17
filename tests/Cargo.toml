@@ -8,7 +8,3 @@ edition = "2021"
 bevy = "0.7"
 bevy_hotedit = { path = "../bevy_hotedit" }
 
-
-# TODO remove
-lazy_static = "1.4.0" # TODO move to other cargo.toml # probably don't need this, look into removing later.
-

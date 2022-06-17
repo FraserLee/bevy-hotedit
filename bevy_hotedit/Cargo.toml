@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bevy_hotedit_macros = { path = "macros" }
 bevy = "0.7"
 toml = "0.5"
-bevy_hotedit_macros = { path = "macros" }
+lazy_static = "1.4.0" # probably don't need this, look into removing later.
+notify = "4.0.17"
+
