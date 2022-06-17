@@ -46,13 +46,9 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
         
         // - insert the value into the toml, return the TokenStream unchanged
 
-        // There's probably a way to extract a string-version from value, 
-        // but this seems good enough for the moment. Sorry.
         file_t.insert(
             s.ident.to_string(),
-            parse_value(
-                item.to_string().split("=").skip(1).next().unwrap().split(";").next().unwrap().trim()
-            )
+            parse_value(&item.to_string())
         );
         
         std::fs::write(&path, toml::to_string_pretty(&file_t).unwrap()).unwrap();
@@ -81,8 +77,8 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
                 quote! { const #iden : #ty = #f_unsuffixed; }.into()
             }
 
-            // todo: write tests
             Value::String(s) => { quote! { const #iden : #ty = #s; }.into() },
+
             Value::Boolean(b) => { quote! { const #iden : #ty = #b; }.into() },
 
             _ => panic!("unsupported type")
@@ -98,12 +94,11 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 // dumb trick, this won't work soon. No way to do enums or anything cool.
-fn parse_value(s: &str) -> Value {
-    format!("test = {}\n", s).parse::<Value>().unwrap()["test"].clone()
+// Still it'll work for the moment.
+fn parse_value(line: &str) -> Value {
+    let value = line.split("=").skip(1).next().unwrap().split(";").next().unwrap().trim();
+    format!("test = {}\n", value).parse::<Value>().unwrap()["test"].clone()
 }
-
-
-
 
 
 
