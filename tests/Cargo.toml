@@ -6,5 +6,5 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.7"
-bevy_hotedit = { path = "../bevy_hotedit" }
+bevy_hotedit = { path = "../hotedit" }
 
