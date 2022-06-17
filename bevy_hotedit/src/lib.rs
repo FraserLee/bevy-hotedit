@@ -27,7 +27,7 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
     
     let file = std::fs::read_to_string(&path).unwrap();
 
-    let toml = file.parse::<Value>().unwrap();
+    let mut toml = file.parse::<Value>().unwrap();
     let toml = toml.as_table().unwrap();
     
 
@@ -44,55 +44,54 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
     let trait_parse_r = syn::parse::<syn::TraitItemConst>(item.clone());
     let full_parse_r = syn::parse::<syn::ItemConst>(item.clone());
 
-    let (name, ty, value) = if let Ok(tree) = full_parse_r {
-        (tree.ident, *tree.ty, Some(tree.expr))
-    } else if let Ok(tree) = trait_parse_r {
-        (tree.ident, tree.ty, None)
-    } else {
-        panic!("Could not parse {} as either syn::TraitItemConst or syn::ItemConst", item.to_string());
-    };
+    if let Ok(s) = full_parse_r { // const NAME: ty = value;
+        
+        // - insert the value into the toml, return the TokenStream unchanged
+
+        // There's probably a way to extract a string-version from value, 
+        // but this seems good enough for the moment. Sorry.
+        toml[&s.ident.to_string()] = Value::String(
+            item.to_string().split("=").skip(1).next().unwrap().split(";").next().unwrap().trim().to_string()
+        );
+        
+        std::fs::write(&path, toml::to_string_pretty(&toml).unwrap()).unwrap();
 
 
+        return item;
 
-    
-    // if the key isn't in the toml, either 
-    // - A: insert whatever we find in the value field of the canst to initialize it.
-    // - B: panic.
-    if !toml.contains_key(&name.to_string()) {
-        if let Some(_) = value {
-            // There's probably a way to extract a string-version from value, 
-            // but this seems good enough for the moment. Sorry.
-            std::fs::write(&path, 
-                format!("{}\n{} = {}", 
-                    file, 
-                    name, 
-                    item.to_string().split("=").skip(1).next().unwrap().split(";").next().unwrap().trim()
-                )).unwrap();
-            return item;
-        }
+    } else if let Ok(s) = trait_parse_r { // const NAME: ty;
 
-        panic!("key \"{}\" not found in toml file", name);
+        // get the value from the toml, return a modified TokenStream with the value inserted.
+
+        // if the key isn't in the toml, either 
+        let (name, ty) = (s.ident.to_string(), s.ty);
+        if !toml.contains_key(&name) { panic!("key \"{}\" not found in toml file", name); }
+
+        let new_item: TokenStream = match &toml[&name] {
+
+            Value::Integer(i) => { 
+                let i_unsuffixed = Literal::i64_unsuffixed(*i);
+                quote! { const #name : #ty = #i_unsuffixed; }.into()
+            }
+
+            Value::Float(f) => {
+                let f_unsuffixed = Literal::f64_unsuffixed(*f);
+                quote! { const #name : #ty = #f_unsuffixed; }.into()
+            }
+
+            // todo: write tests
+            Value::String(s) => { quote! { const #name : #ty = #s; }.into() },
+            Value::Boolean(b) => { quote! { const #name : #ty = #b; }.into() },
+
+            _ => panic!("unsupported type")
+        };
+
+        // println!("new_item: \"{}\"", new_item.to_string());
+
+        return new_item;
     }
 
-
-    // at this point, we can just grab the key from the toml and use it to 
-    // initialize the const.
-
-    let new_item: TokenStream = match &toml[&name.to_string()] {
-        Value::Integer(i) => { 
-            let i_unsuffixed = Literal::i64_unsuffixed(*i);
-            quote! { const #name : #ty = #i_unsuffixed; }.into()
-        }
-        Value::Float(f) => {
-            let f_unsuffixed = Literal::f64_unsuffixed(*f);
-            quote! { const #name : #ty = #f_unsuffixed; }.into()
-        }
-        _ => panic!("unsupported type")
-    };
-
-    println!("new_item: \"{}\"", new_item.to_string());
-
-    new_item
+    panic!("Could not parse {} as either syn::TraitItemConst or syn::ItemConst", item.to_string());
 
 }
 
