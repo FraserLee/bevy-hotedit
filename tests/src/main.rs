@@ -1,10 +1,6 @@
 #![allow(unused_imports)]
 use bevy::prelude::*;
 use bevy_hotedit::*;
-use toml::value::Table;
-
-
-
 
 
 
@@ -30,7 +26,8 @@ use toml::value::Table;
 
 
 #[hot] const STRING_CONST1: &str;
-#[hot] const STRING_CONST2: &str;
+#[hot] const STRING_CONST2: String; // not sure whether the fact that this
+                                    // works is a good idea or not.
 
 #[test] fn string_const_load_test() {
     assert_eq!(STRING_CONST1(), "danger, snakes.");
@@ -47,20 +44,21 @@ use toml::value::Table;
 #[test]
 fn bevy_test() {
     App::new()
-        .add_startup_system( | | { assert_eq!(1, 1); })
+        .add_startup_system( || { assert_eq!(1, 1); })
         .run();
 }
 
         
 // fn main() { println!("run `cargo test` to test"); }
 
-#[hot] const FOOBAR: i32 = 1;
+#[hot] const FOOBAR: i32;
 
 fn main() { 
     App::new()
         .add_plugins(MinimalPlugins)
+        .add_plugin(HotEditPlugin)
         .add_system(|| {
-            println!("{}", FOOBAR);
+            println!("{}", FOOBAR());
         })
         .run();
 }

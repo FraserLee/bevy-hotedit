@@ -421,6 +421,15 @@ dependencies = [
 name = "bevy_hotedit"
 version = "0.1.0"
 dependencies = [
+ "bevy",
+ "bevy_hotedit_macros",
+ "toml",
+]
+
+[[package]]
+name = "bevy_hotedit_macros"
+version = "0.1.0"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn",
@@ -434,7 +443,6 @@ dependencies = [
  "bevy",
  "bevy_hotedit",
  "lazy_static",
- "toml",
 ]
 
 [[package]]

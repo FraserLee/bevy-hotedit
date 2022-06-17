@@ -20,8 +20,9 @@ test with `cargo test` from project root.
      - [x] tests, find out how test environment works
 
  - [ ] live-refresh
-     - [ ] const -> function switch
-     - [ ] function lookup from file, cache w/ filesystem based invalidation
+     - [x] const -> function switch
+     - [x] function lookup from file
+         - [ ] cache w/ filesystem based invalidation
      - [ ] release-build replace with consts
      - [ ] tests
 

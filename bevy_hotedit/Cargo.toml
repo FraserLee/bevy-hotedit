@@ -3,11 +3,7 @@ name = "bevy_hotedit"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
-proc-macro = true
-
 [dependencies]
-syn = "1.0"
-quote = "1.0"
+bevy = "0.7"
 toml = "0.5"
-proc-macro2 = "1.0"
+bevy_hotedit_macros = { path = "macros" }
