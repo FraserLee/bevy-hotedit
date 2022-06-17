@@ -60,31 +60,53 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
 
         // get the value from the toml, return a modified TokenStream with the value inserted.
 
-        // if the key isn't in the toml, either 
         let (iden, name, ty) = (&s.ident, s.ident.to_string(), s.ty);
-        if !file_t.contains_key(&name) { panic!("key \"{}\" not found in toml file", name); }
+        let mut ty = quote!(#ty);
 
+        // panic if we don't have a value for this const
+        if !file_t.contains_key(&name) {
+            panic!("key \"{}\" not found in toml file", name);
+        }
 
-        let new_item: TokenStream = match &file_t[&name] {
-
+        // otherwise, get it from the toml and convert it into a literal
+        let (value, conversion) = match &file_t[&name] {
             Value::Integer(i) => { 
-                let i_unsuffixed = Literal::i64_unsuffixed(*i);
-                quote! { const #iden : #ty = #i_unsuffixed; }.into()
+                let l = Literal::i64_unsuffixed(*i);
+                (quote!(#l), quote!(.as_integer().unwrap() as #ty))
             }
-
             Value::Float(f) => {
-                let f_unsuffixed = Literal::f64_unsuffixed(*f);
-                quote! { const #iden : #ty = #f_unsuffixed; }.into()
+                let l = Literal::f64_unsuffixed(*f);
+                (quote!(#l), quote!(.as_float().unwrap() as #ty))
             }
-
-            Value::String(s) => { quote! { const #iden : #ty = #s; }.into() },
-
-            Value::Boolean(b) => { quote! { const #iden : #ty = #b; }.into() },
-
-            _ => panic!("unsupported type")
+            Value::String(s) => {
+                ty = quote!(String);
+                (quote!{#s.to_string()}, quote!(.as_str().unwrap().to_string()))
+            }
+            Value::Boolean(b) => (quote!{#b}, quote!(.as_bool().unwrap() as #ty)),
+            _ => panic!("unsupported value \"{:?}\" for const \"{}\"", file_t[&name], name)
         };
 
-        // println!("new_item: \"{}\"", new_item.to_string());
+
+
+
+        let new_item: TokenStream = quote! { 
+            #[inline]
+            #[allow(non_snake_case)]
+            fn #iden() -> #ty {
+                if !cfg!(debug_assertions) { return #value; }
+
+                // fetch the value from the toml file in real-time
+                let file_t: Table = toml::from_str(
+                    &std::fs::read_to_string("src/hotedit-values.toml").unwrap()
+                ).unwrap();
+
+                let v = file_t[#name].clone();
+
+                return v #conversion;
+            }
+        }.into();
+
+        println!("new_item: \"{}\"", new_item.to_string());
 
         return new_item;
     }
