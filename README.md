@@ -1,6 +1,6 @@
 wip. Ignore for the moment, I'll work on this and see where it goes.
 
-test with `cargo test` from project root.
+test with `cargo test -- --test-threads=1` from project root.
 
 
  -----------------------------------------------------------------------------
@@ -25,18 +25,17 @@ test with `cargo test` from project root.
          - [x] cache w/ filesystem based invalidation
      - [x] release-build replace with consts
      - [x] tests (rework first batch into single write)
-     - [ ] tests (bevy systems, edit file)
+     - [x] tests (bevy systems, edit file)
 
  - [x] auto-write consts to toml
-     - [ ] auto-gen non-existent file
-     - [ ] tests
-
- - [ ] increase support for all primitives, enums, strings.
-     - [ ] tests
+     - [x] auto-gen non-existent file
 
  - [ ] local webpage to edit consts
      - [ ] macro-parameters to set input types (min, max, slider, etc)
      - [ ] css
+
+ - [ ] increase support for all primitives, enums, strings.
+     - [ ] tests
 
  - [ ] tagged refresh systems
 
