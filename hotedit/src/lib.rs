@@ -27,9 +27,10 @@ impl Plugin for HotEditPlugin {
 
 lazy_static! {
     // the env! macro has some bugs. This works.
-    static ref CONFIG_PATH: PathBuf = 
-        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("src/hotedit-values.toml");
+    pub static ref CONFIG_PATH: Mutex<PathBuf> = Mutex::new(
+            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
+            .join("src/hotedit-values.toml")
+    );
 
     // a single table with all #[hot] values
     static ref CONFIG: Mutex<Table> = Mutex::new( load_config() );
@@ -37,7 +38,7 @@ lazy_static! {
 
 fn load_config() -> Table {
     toml::from_str(
-        &std::fs::read_to_string(&*CONFIG_PATH).unwrap()
+        &std::fs::read_to_string( CONFIG_PATH.lock().unwrap().as_path() ).unwrap()
     ).unwrap()
 }
 
@@ -49,7 +50,8 @@ fn setup() {
     thread::spawn(move || {
         let (tx, rx) = channel();
         let mut watcher = raw_watcher(tx).unwrap();
-        watcher.watch(&*CONFIG_PATH, RecursiveMode::NonRecursive).unwrap();
+        watcher.watch(CONFIG_PATH.lock().unwrap().as_path(), RecursiveMode::NonRecursive).unwrap();
+        *CONFIG.lock().unwrap() = load_config();
 
         loop {
             match rx.recv() { 

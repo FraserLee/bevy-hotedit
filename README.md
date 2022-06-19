@@ -24,7 +24,7 @@ test with `cargo test` from project root.
      - [x] function lookup from file
          - [x] cache w/ filesystem based invalidation
      - [x] release-build replace with consts
-     - [ ] tests (rework first batch into single write)
+     - [x] tests (rework first batch into single write)
      - [ ] tests (bevy systems, edit file)
 
  - [x] auto-write consts to toml

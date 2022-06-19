@@ -40,7 +40,9 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
     let trait_parse_r = syn::parse::<syn::TraitItemConst>(item.clone());
     let full_parse_r = syn::parse::<syn::ItemConst>(item.clone());
 
-    if let Ok(s) = full_parse_r { // const NAME: ty = value;
+
+    let (value_debug, value_release, iden, ty) = if let Ok(s) = full_parse_r { 
+        // const NAME: ty = value;
         
         // - insert the value into the toml, return the TokenStream unchanged
 
@@ -51,8 +53,11 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
         
         std::fs::write(&path, toml::to_string_pretty(&file_t).unwrap()).unwrap();
 
+        let value = s.expr;
+        let iden = s.ident;
+        let ty = s.ty;
 
-        return item;
+        (quote!{#value}, quote!{#value}, quote!{#iden}, quote!{#ty})
 
     } else if let Ok(s) = trait_parse_r { // const NAME: ty;
 
@@ -60,50 +65,64 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
 
         let (iden, name, ty) = (&s.ident, s.ident.to_string(), s.ty);
         let mut ty = quote!(#ty);
+        if ty.to_string() == "& str" { ty = quote!(String); }
 
-        // panic if we don't have a value for this const
+        // give a half-answer if we don't have a value for this const
+        // (maybe a better solution is possible, but this state shouldn't 
+        // really happen unless the user just forgot, or in testing).
         if !file_t.contains_key(&name) {
-            panic!("key \"{}\" not found in toml file", name);
+            eprintln!("ERROR: key \"{}\" not found in toml file, omitting compiled const.", name);
+            return quote!{
+                #[inline]
+                #[allow(non_snake_case)]
+                fn #iden() -> #ty {
+                    unimplemented!("{} not found in toml file", #name);
+                }
+            }.into();
         }
 
         // otherwise, get it from the toml and convert it into a literal
         let (value, conversion) = match &file_t[&name] {
+
             Value::Integer(i) => { 
                 let l = Literal::i64_unsuffixed(*i);
                 (quote!(#l), quote!(.as_integer().unwrap() as #ty))
             }
+
             Value::Float(f) => {
                 let l = Literal::f64_unsuffixed(*f);
                 (quote!(#l), quote!(.as_float().unwrap() as #ty))
             }
+
+            Value::Boolean(b) => (quote!{#b}, quote!(.as_bool().unwrap() as #ty)),
+
             Value::String(s) => {
-                ty = quote!(String);
                 (quote!{#s.to_string()}, quote!(.as_str().unwrap().to_string()))
             }
-            Value::Boolean(b) => (quote!{#b}, quote!(.as_bool().unwrap() as #ty)),
+
             _ => panic!("unsupported value \"{:?}\" for const \"{}\"", file_t[&name], name)
         };
+        
+
+        (quote!{lookup(#name) #conversion}, quote!{#value}, quote!{#iden}, quote!{#ty})
+    } else {
+        panic!("Could not parse {} as either syn::TraitItemConst or syn::ItemConst", item.to_string());
+    };
 
 
+    let new_item: TokenStream = quote! { 
+        #[inline]
+        #[allow(non_snake_case)]
+        fn #iden() -> #ty {
+            // either return the const value (release build) 
+            // or look it up from the toml (debug build)
+            if !cfg!(debug_assertions) { #value_release } else { #value_debug }
+        }
+    }.into();
 
+    // println!("new_item: \"{}\"", new_item.to_string());
 
-        let new_item: TokenStream = quote! { 
-            #[inline]
-            #[allow(non_snake_case)]
-            fn #iden() -> #ty {
-                // either return the const value (release build) 
-                // or look it up from the toml (debug build)
-                if !cfg!(debug_assertions) { #value }
-                else { lookup(#name) #conversion }
-            }
-        }.into();
-
-        // println!("new_item: \"{}\"", new_item.to_string());
-
-        return new_item;
-    }
-
-    panic!("Could not parse {} as either syn::TraitItemConst or syn::ItemConst", item.to_string());
+    return new_item;
 
 }
 
