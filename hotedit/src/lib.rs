@@ -84,10 +84,11 @@ pub fn lookup(ident: &str) -> Value {
 
 
 
+const HTML: &str = include_str!("base.html");
 
 #[tokio::main]
 async fn web_server() {
-    let app = axum::Router::new().route("/", axum::routing::get(|| async { "Hello, World!" }));
+    let app = axum::Router::new().route("/", axum::routing::get(|| async { HTML.to_string() }));
     axum::Server::bind(&"0.0.0.0:2022".parse().unwrap())
         .serve(app.into_make_service())
         .await

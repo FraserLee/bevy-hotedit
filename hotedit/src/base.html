@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>HotEdit</title>
+        <meta charset="utf-8" />
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;400;900&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@200;400;700;900&family=Roboto:wght@100;400;900&display=swap');
+            /* f2545b
+               a93f55
+               19323c
+               f3f7f0
+               8c5e58
+             */
+
+            body {
+                background-color: #19323c;
+                color: #f3f7f0;
+                font-family: "Inconsolata", monospace;
+                font-size: 0.9rem;
+                line-height: 1.4rem;
+            }
+            #content-outer {
+                padding: 2rem 3rem;
+                max-width: 32rem;
+                margin: auto;
+                display: flex;
+            }
+            h1 {
+                font-size: 5rem;
+                font-weight: 100;
+                font-family: 'Roboto', sans-serif;
+            }
+            p {
+                margin: 1.5rem 0;
+            }
+            p.bg {
+                color: #808080;
+            }
+            a {
+                color: #f3f7f0;
+                text-decoration: underline;
+            }
+            a:hover {
+                text-decoration: none;
+            }
+            code {
+                font-family: "Inconsolata", monospace;
+                padding: 0.05rem 0.1rem;
+                border-radius: 0.2rem;
+                background-color: #f2545b;
+                color: #19323c;
+            }
+            code.bg {
+                background-color: #a93f55;
+            }
+
+
+        </style>
+    </head>
+    <body>
+        <div id="content-outer">
+            <div>
+                <h1>HotEdit</h1>
+                <p> Welcome to <u>HotEdit</u>. Add the <code>#[hot]</code> macro
+                    to one of your consts, and it'll be editable here in real-time.
+                </p>
+                <p class="bg">* also replace usage of
+                    <code class="bg">CONST_NAME</code> with <br> the function-call 
+                    <code class="bg">CONST_NAME()</code>.
+                </p>
+                <p> If changing the value of a const requires further steps 
+                    (like pushing a new colour to a material), you can add the
+                    <code>#[hot-refresh]</code> macro to a bevy system, and it
+                    will only be called when the value of a const changes.
+                </p>
+                <p> I'm <i>fairly certain</i> I've implemented everything in a 
+                    way that'll have zero runtime cost in a release build. If
+                    you're better at rust than I am, please
+                    <a href="https://github.com/FraserLee/bevy-hotedit">
+                        check out the source</a>!
+            </div>
+        </div>
+    </body>
+</html>
