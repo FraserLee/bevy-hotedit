@@ -42,7 +42,7 @@ fn mega_test() {
 
     App::new()
         .add_plugins(MinimalPlugins)
-        .add_plugin(HotEditPlugin)
+        .add_plugin(HotEditPlugin { auto_open: false })
         .insert_resource(ChangeTimer(Timer::from_seconds(0.25, false)))
         .insert_resource(ExitTimer(Timer::from_seconds(0.5, false)))
         .add_system( |
@@ -80,7 +80,7 @@ fn mega_test() {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(HotEditPlugin)
+        .add_plugin(HotEditPlugin { auto_open: true })
         .run();
 }
 

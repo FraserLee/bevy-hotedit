@@ -19,12 +19,23 @@ pub use bevy_hotedit_macros::*;
 
 
 
-pub struct HotEditPlugin;
+pub struct HotEditPlugin {
+    pub auto_open: bool,
+}
 
 impl Plugin for HotEditPlugin {
     fn build(&self, app: &mut App) {
+
         app.add_startup_system(setup);
-        app.add_startup_system(web_setup);
+
+        app.add_startup_system(|| {
+            thread::spawn(move || { web_server(); });
+        });
+
+        if self.auto_open { // open page in default browser
+            open::that("http://localhost:2022").unwrap();
+        }
+
     }
 }
 
@@ -74,13 +85,6 @@ pub fn lookup(ident: &str) -> Value {
 
 
 
-fn web_setup() { 
-    thread::spawn(move || {
-        web_server();
-    });
-}
-
-
 #[tokio::main]
 async fn web_server() {
     let app = axum::Router::new().route("/", axum::routing::get(|| async { "Hello, World!" }));
@@ -88,4 +92,6 @@ async fn web_server() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+
+
 }

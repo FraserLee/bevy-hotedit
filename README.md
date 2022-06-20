@@ -32,7 +32,7 @@ test with `cargo test -- --test-threads=1` from project root.
 
  - [ ] local webpage to edit consts
      - [x] serve webpage from thread
-     - [ ] auto-open on startup in browser
+     - [x] auto-open on startup in browser
      - [ ] basic HTML
      - [ ] gen html by items
      - [ ] macro-parameters to set input types (min, max, slider, etc)
@@ -53,5 +53,5 @@ test with `cargo test -- --test-threads=1` from project root.
 
  - [ ] rewrite - pure serialization (de-serialize to retrieve value both in
                  debug and release) without any other weird formats or hacky
-                 representations.
+                 representations (possibly miniserde?)
 

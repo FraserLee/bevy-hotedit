@@ -13,6 +13,7 @@ notify = "4.0.17"
 
 axum = "0.5.8"
 tokio = { version = "1.19.2", features = ["full"] }
+open = "3.0.1"
 
 
 
