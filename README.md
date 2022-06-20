@@ -31,6 +31,10 @@ test with `cargo test -- --test-threads=1` from project root.
      - [x] auto-gen non-existent file
 
  - [ ] local webpage to edit consts
+     - [x] serve webpage from thread
+     - [ ] auto-open on startup in browser
+     - [ ] basic HTML
+     - [ ] gen html by items
      - [ ] macro-parameters to set input types (min, max, slider, etc)
      - [ ] css
 
@@ -46,4 +50,8 @@ test with `cargo test -- --test-threads=1` from project root.
  - [ ] write documentation
 
  - [ ] publish crate
+
+ - [ ] rewrite - pure serialization (de-serialize to retrieve value both in
+                 debug and release) without any other weird formats or hacky
+                 representations.
 

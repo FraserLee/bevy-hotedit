@@ -4,7 +4,7 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_hotedit::*;
 
-fn main() { println!("run `cargo test -- --test-threads=1` to test"); }
+// fn main() { println!("run `cargo test -- --test-threads=1` to test"); }
 
 #[hot] const INT_CONST1: usize;
 #[hot] const INT_CONST2: i8;
@@ -74,3 +74,14 @@ fn mega_test() {
         })
         .run();
 }
+
+
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(HotEditPlugin)
+        .run();
+}
+
+

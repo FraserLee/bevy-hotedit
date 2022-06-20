@@ -7,6 +7,9 @@ use bevy::prelude::*;
 use notify::{Watcher, RecursiveMode, RawEvent, raw_watcher};
 use toml::{ self, Value, value::Table };
 
+
+
+
 #[macro_use] extern crate lazy_static;
 
 pub use bevy_hotedit_macros::*;
@@ -21,6 +24,7 @@ pub struct HotEditPlugin;
 impl Plugin for HotEditPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
+        app.add_startup_system(web_setup);
     }
 }
 
@@ -40,7 +44,6 @@ fn load_config() -> Table {
         &std::fs::read_to_string( CONFIG_PATH.as_path() ).unwrap()
     ).unwrap()
 }
-
 
 fn setup() {
     // There's probably a bevy-native way to do this, but this works.
@@ -69,3 +72,20 @@ pub fn lookup(ident: &str) -> Value {
 }
 
 
+
+
+fn web_setup() { 
+    thread::spawn(move || {
+        web_server();
+    });
+}
+
+
+#[tokio::main]
+async fn web_server() {
+    let app = axum::Router::new().route("/", axum::routing::get(|| async { "Hello, World!" }));
+    axum::Server::bind(&"0.0.0.0:2022".parse().unwrap())
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
