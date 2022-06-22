@@ -33,7 +33,7 @@ impl Plugin for HotEditPlugin {
         });
 
         if self.auto_open { // open page in default browser
-            open::that("http://localhost:2022").unwrap();
+            open::that("http://localhost:8000").unwrap();
         }
 
     }
@@ -84,15 +84,22 @@ pub fn lookup(ident: &str) -> Value {
 
 
 
-const HTML: &str = include_str!("base.html");
 
-#[tokio::main]
+
+#[macro_use] extern crate rocket;
+
+#[get("/")]
+fn index() -> &'static str {
+    "Hello, world!"
+}
+
+
+// const HTML: &str = include_str!("base.html");
+
+// TODO: find out how to disable the warning here, or how to get rocket to
+// run in a thread without complaining.
+#[rocket::main]
 async fn web_server() {
-    let app = axum::Router::new().route("/", axum::routing::get(|| async { HTML.to_string() }));
-    axum::Server::bind(&"0.0.0.0:2022".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-
-
+    let app = rocket::build().mount("/", routes![index]);
+    let _ = app.launch().await;
 }

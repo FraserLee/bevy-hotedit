@@ -11,8 +11,7 @@ lazy_static = "1.4.0" # probably don't need this, look into removing later.
 
 notify = "4.0.17"
 
-axum = "0.5.8"
-tokio = { version = "1.19.2", features = ["full"] }
+rocket = "0.5.0-rc.2"
 open = "3.0.1"
 
 
