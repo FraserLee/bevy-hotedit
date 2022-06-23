@@ -10,8 +10,8 @@ use toml::{ self, Value, value::Table };
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] extern crate rocket;
-use rocket_dyn_templates::Template;
-use rocket_dyn_templates::context;
+use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
+use rocket_dyn_templates::{ Template, context };
 
 
 
@@ -31,7 +31,7 @@ impl Plugin for HotEditPlugin {
             thread::spawn(move || { 
                 rocket::async_main(async move {
                     let app = rocket::build()
-                        .mount("/", routes![index])
+                        .mount("/", routes![index, submit])
                         .attach(Template::fairing());
                     let _ = app.launch().await;
                 });
@@ -61,6 +61,9 @@ fn load_config() -> Table {
         &std::fs::read_to_string( CONFIG_PATH.as_path() ).unwrap()
     ).unwrap()
 }
+
+
+
 
 fn setup() {
     // There's probably a bevy-native way to do this, but this works.
@@ -94,8 +97,41 @@ pub fn lookup(ident: &str) -> Value {
 
 
 
+
+/*
+<form action="/" method="post">
+    <input type="text" placeholder="foo (string)"
+        name="foo" id="foo" value="" />
+    <input type="number" placeholder="bar (number)"
+        name="bar" id="bar" value="" />
+    <input type="checkbox" placeholder="baz (bool)"
+        name="baz" id="baz" value="" />
+</form>
+*/
+
+#[derive(Debug, FromForm)]
+struct Submission<'v> {
+    foo: &'v str,
+    bar: i32,
+    baz: bool,
+}
+
+
+
+
+
 #[get("/")]
 fn index() -> Template {
+    Template::render("base", context! {
+        title: env!("CARGO_PKG_NAME"),
+    })
+}
+
+
+
+#[post("/", data = "<form>")]
+fn submit<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
+    dbg!(form);
     Template::render("base", context! {
         title: env!("CARGO_PKG_NAME"),
     })
