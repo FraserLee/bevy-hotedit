@@ -61,7 +61,7 @@
     <body>
         <div id="content-outer">
             <div>
-                <h1>HotEdit</h1>
+                <h1>{{ title }}</h1>
                 <p> Welcome to <u>HotEdit</u>. Add the <code>#[hot]</code> macro
                     to one of your consts, and it'll be editable here in real-time.
                 </p>

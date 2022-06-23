@@ -76,10 +76,15 @@ fn mega_test() {
 }
 
 
-
+use bevy::window::WindowId;
+use bevy::winit::WinitWindows;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        // hide main window
+        .add_startup_system(|windows: NonSend<WinitWindows>| {
+            windows.get_window(WindowId::primary()).unwrap().set_visible(false);
+        })
         .add_plugin(HotEditPlugin { auto_open: true })
         .run();
 }

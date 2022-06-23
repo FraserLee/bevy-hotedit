@@ -7,16 +7,15 @@ use bevy::prelude::*;
 use notify::{Watcher, RecursiveMode, RawEvent, raw_watcher};
 use toml::{ self, Value, value::Table };
 
-
-
-
 #[macro_use] extern crate lazy_static;
 
+#[macro_use] extern crate rocket;
+use rocket_dyn_templates::Template;
+use rocket_dyn_templates::context;
+
+
+
 pub use bevy_hotedit_macros::*;
-
-
-
-
 
 
 pub struct HotEditPlugin {
@@ -31,7 +30,9 @@ impl Plugin for HotEditPlugin {
         app.add_startup_system(|| {
             thread::spawn(move || { 
                 rocket::async_main(async move {
-                    let app = rocket::build().mount("/", routes![index]);
+                    let app = rocket::build()
+                        .mount("/", routes![index])
+                        .attach(Template::fairing());
                     let _ = app.launch().await;
                 });
             });
@@ -92,12 +93,12 @@ pub fn lookup(ident: &str) -> Value {
 
 
 
-#[macro_use] extern crate rocket;
 
-// const HTML: &str = include_str!("base.html");
 #[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
+fn index() -> Template {
+    Template::render("base", context! {
+        title: env!("CARGO_PKG_NAME"),
+    })
 }
 
 
