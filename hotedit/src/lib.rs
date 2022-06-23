@@ -29,7 +29,12 @@ impl Plugin for HotEditPlugin {
         app.add_startup_system(setup);
 
         app.add_startup_system(|| {
-            thread::spawn(move || { web_server(); });
+            thread::spawn(move || { 
+                rocket::async_main(async move {
+                    let app = rocket::build().mount("/", routes![index]);
+                    let _ = app.launch().await;
+                });
+            });
         });
 
         if self.auto_open { // open page in default browser
@@ -86,20 +91,13 @@ pub fn lookup(ident: &str) -> Value {
 
 
 
+
 #[macro_use] extern crate rocket;
 
+// const HTML: &str = include_str!("base.html");
 #[get("/")]
 fn index() -> &'static str {
     "Hello, world!"
 }
 
 
-// const HTML: &str = include_str!("base.html");
-
-// TODO: find out how to disable the warning here, or how to get rocket to
-// run in a thread without complaining.
-#[rocket::main]
-async fn web_server() {
-    let app = rocket::build().mount("/", routes![index]);
-    let _ = app.launch().await;
-}
