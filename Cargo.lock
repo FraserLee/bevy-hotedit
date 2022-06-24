@@ -510,8 +510,8 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_hotedit_macros",
+ "bevy_hotedit_util",
  "lazy_static",
- "notify 4.0.17",
  "open",
  "rocket",
  "rocket_dyn_templates",
@@ -522,8 +522,10 @@ dependencies = [
 name = "bevy_hotedit_macros"
 version = "0.1.0"
 dependencies = [
+ "bevy_hotedit_util",
  "proc-macro2",
  "quote",
+ "regex",
  "syn",
  "toml",
 ]
@@ -534,6 +536,14 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_hotedit",
+]
+
+[[package]]
+name = "bevy_hotedit_util"
+version = "0.1.0"
+dependencies = [
+ "duplicate",
+ "toml",
 ]
 
 [[package]]
@@ -1568,6 +1578,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
+name = "duplicate"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a2535fcf1437c9de0d91a3921351c474258abdb6440cd03bb5a7cf0547e7214"
+dependencies = [
+ "heck",
+ "proc-macro-error",
+]
+
+[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2082,6 +2102,12 @@ dependencies = [
  "ahash",
  "serde",
 ]
+
+[[package]]
+name = "heck"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
 
 [[package]]
 name = "hermit-abi"
@@ -3335,6 +3361,30 @@ checksum = "e17d47ce914bf4de440332250b0edd23ce48c005f59fab39d3335866b114f11a"
 dependencies = [
  "thiserror",
  "toml",
+]
+
+[[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
 ]
 
 [[package]]

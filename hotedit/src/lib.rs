@@ -1,21 +1,66 @@
 use std::path::PathBuf;
-use std::sync::mpsc::channel;
+use std::collections::HashMap;
 use std::sync::Mutex;
 use std::thread;
 
 use bevy::prelude::*;
-use notify::{Watcher, RecursiveMode, RawEvent, raw_watcher};
-use toml::{ self, Value, value::Table };
 
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] extern crate rocket;
 use rocket::form::{ Form, Contextual, FromForm, Context };
-use rocket_dyn_templates::{ Template, context };
+use rocket_dyn_templates::{ Template, /* context */ };
 
 
 
 pub use bevy_hotedit_macros::*;
+use bevy_hotedit_util as util;
+pub use util::Value;
+
+
+
+
+pub struct HotVariable {
+    pub name: String,
+    pub line_num: usize,
+    pub value: Value,
+}
+
+impl HotVariable {
+    pub fn register(self) { // consumes self, registering it in the global map
+        let mut hot_vars = HOT_VARS.lock().unwrap();
+        hot_vars.insert(self.name.clone(), self);
+    }
+}
+
+
+lazy_static! {
+    // the env! macro has some bugs. This works.
+    pub static ref CONFIG_PATH: PathBuf = 
+            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
+            .join("src/hotedit-values.toml");
+
+    // a single table with all #[hot] values
+    static ref HOT_VARS: Mutex<HashMap<String, HotVariable>> = Mutex::new(HashMap::new());
+}
+
+
+pub fn lookup(ident: &str) -> Option<Value> {
+    // try to lookup the value in the global map, and if that fails, try to
+    // parse it from the config file. Should both fail, return None.
+    match HOT_VARS.lock().unwrap().get(ident) {
+        Some(var) => Some(var.value.clone()),
+        None => util::lookup_from_file(ident, CONFIG_PATH.to_str().unwrap()),
+    }
+}
+
+
+
+
+
+
+
+
 
 
 pub struct HotEditPlugin {
@@ -24,8 +69,6 @@ pub struct HotEditPlugin {
 
 impl Plugin for HotEditPlugin {
     fn build(&self, app: &mut App) {
-
-        app.add_startup_system(setup);
 
         app.add_startup_system(|| {
             thread::spawn(move || { 
@@ -46,50 +89,10 @@ impl Plugin for HotEditPlugin {
 }
 
 
-lazy_static! {
-    // the env! macro has some bugs. This works.
-    pub static ref CONFIG_PATH: PathBuf = 
-            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-            .join("src/hotedit-values.toml");
-
-    // a single table with all #[hot] values
-    static ref CONFIG: Mutex<Table> = Mutex::new( load_config() );
-}
-
-fn load_config() -> Table {
-    toml::from_str(
-        &std::fs::read_to_string( CONFIG_PATH.as_path() ).unwrap()
-    ).unwrap()
-}
 
 
 
 
-fn setup() {
-    // There's probably a bevy-native way to do this, but this works.
-    // Create another thread to spin-watch for writes on the config file,
-    // re-reading it and setting the config mutex when updated.
-    thread::spawn(move || {
-        let (tx, rx) = channel();
-        let mut watcher = raw_watcher(tx).unwrap();
-        watcher.watch(CONFIG_PATH.as_path(), RecursiveMode::NonRecursive).unwrap();
-
-        loop {
-            match rx.recv() { 
-                Ok(RawEvent { path: _, op: _, cookie: _ }) => {
-                    thread::sleep(std::time::Duration::from_millis(100));
-                    *CONFIG.lock().unwrap() = load_config();
-                }
-                Err(e) => eprintln!("watch error: {:?}", e),
-            }
-        }
-    });
-}
-
-// lookup some value in the config table
-pub fn lookup(ident: &str) -> Value {
-    CONFIG.lock().unwrap().get(ident).unwrap().clone()
-}
 
 
 

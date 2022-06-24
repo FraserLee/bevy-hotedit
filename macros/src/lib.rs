@@ -1,35 +1,25 @@
 #![feature(proc_macro_span)]
 
 use proc_macro::{ TokenStream, Span };
-use proc_macro2::Literal;
+use quote::{ quote, format_ident };
+use regex::Regex;
 
-use quote::quote;
-use syn::{ self, parse_macro_input };
-
-use toml::{ self, Value, value::Table };
-
-
-
+use bevy_hotedit_util as util;
 
 #[proc_macro_attribute]
-pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
-    
-    // read the file "hotedit-values.toml" from the "src/" directory of 
-    // project using this macro, parse it into a toml from which to extract
-    // values.
-    let path = Span::call_site().source_file().path();
-    let path = path.to_str().unwrap();
-    let path = path.split("src/").next().unwrap();
-    let path = format!("{}src/hotedit-values.toml", path);
-    
-    let file = std::fs::read_to_string(&path).unwrap();
+pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
 
-    let mut file_t: Table = toml::from_str(&file).unwrap();
+    // find the path to the file "hotedit-values.toml" from the "src/" 
+    // directory of the project using this macro.
+
+    let line_num = Span::call_site().start().line;
+
+    let path = format!("{}/src/hotedit-values.toml", std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    
+
+    // step 1: parse the line to pull out the const name and type
 
     
-    // we don't need any macro arguments at the moment, but here's how to get them.
-    let _args = parse_macro_input!(args as syn::AttributeArgs);
-
     // try to parse our line as either syn::TraitItemConst or syn::ItemConst
     // to extract stuff as
     //     const NAME: ty;
@@ -41,96 +31,122 @@ pub fn hot(args: TokenStream, item: TokenStream) -> TokenStream {
     let full_parse_r = syn::parse::<syn::ItemConst>(item.clone());
 
 
-    let (value_debug, value_release, iden, ty) = if let Ok(s) = full_parse_r { 
-        // const NAME: ty = value;
-        
-        // - insert the value into the toml, return the TokenStream unchanged
+    let (ident, ty) = if let Ok(s) = full_parse_r { // const NAME: ty = value;
 
-        file_t.insert(
-            s.ident.to_string(),
-            parse_value(&item.to_string())
-        );
-        
-        std::fs::write(&path, toml::to_string_pretty(&file_t).unwrap()).unwrap();
+        // step 2: if the expression is specified with an =, parse
+        // that to a variable and write it to the toml file.
+
+        let ident = s.ident;
+        let ty = *s.ty;
 
         let value = s.expr;
-        let iden = s.ident;
-        let ty = s.ty;
-
-        (quote!{#value}, quote!{#value}, quote!{#iden}, quote!{#ty})
-
-    } else if let Ok(s) = trait_parse_r { // const NAME: ty;
-
-        // get the value from the toml, return a modified TokenStream with the value inserted.
-
-        let (iden, name, ty) = (&s.ident, s.ident.to_string(), s.ty);
-        let mut ty = quote!(#ty);
-        if ty.to_string() == "& str" { ty = quote!(String); }
-
-        // give a half-answer if we don't have a value for this const
-        // (maybe a better solution is possible, but this state shouldn't 
-        // really happen unless the user just forgot, or in testing).
-        if !file_t.contains_key(&name) {
-            eprintln!("ERROR: key \"{}\" not found in toml file, omitting compiled const.", name);
-            return quote!{
-                #[inline]
-                #[allow(non_snake_case)]
-                fn #iden() -> #ty {
-                    unimplemented!("{} not found in toml file", #name);
-                }
-            }.into();
+        if let syn::Expr::Lit(l) = *value {
+            let value = match l.lit {
+                syn::Lit::Str(s) => format!("\"{}\"", s.value()),
+                syn::Lit::Int(i) => i.base10_digits().to_string(),
+                syn::Lit::Float(f) => f.base10_digits().to_string(),
+                syn::Lit::Bool(b) => b.value().to_string(),
+                _ => panic!("unsupported literal type for const \"{}\"", ident)
+            };
+            util::write_to_file(&ident.to_string(), &value, &path);
         }
 
-        // otherwise, get it from the toml and convert it into a literal
-        let (value, conversion) = match &file_t[&name] {
+        (quote!{#ident}, quote!{#ty})
 
-            Value::Integer(i) => { 
-                let l = Literal::i64_unsuffixed(*i);
-                (quote!(#l), quote!(.as_integer().unwrap() as #ty))
-            }
-
-            Value::Float(f) => {
-                let l = Literal::f64_unsuffixed(*f);
-                (quote!(#l), quote!(.as_float().unwrap() as #ty))
-            }
-
-            Value::Boolean(b) => (quote!{#b}, quote!(.as_bool().unwrap() as #ty)),
-
-            Value::String(s) => {
-                (quote!{#s.to_string()}, quote!(.as_str().unwrap().to_string()))
-            }
-
-            _ => panic!("unsupported value \"{:?}\" for const \"{}\"", file_t[&name], name)
-        };
+    } else if let Ok(s) = trait_parse_r {          // const NAME: ty;
+        let ident = s.ident;
+        let ty = s.ty;
         
-
-        (quote!{lookup(#name) #conversion}, quote!{#value}, quote!{#iden}, quote!{#ty})
+        (quote!{#ident}, quote!{#ty})
     } else {
-        panic!("Could not parse {} as either syn::TraitItemConst or syn::ItemConst", item.to_string());
+        panic!("Couldn't parse line below #[hot] macro. Make sure your syntax \
+                looks like\
+                \n\tconst NAME: ty;\
+                \nor\
+                \n\tconst NAME: ty = value;\n\n\
+                (yours was: {})", item.to_string());
+    };
+
+    let ty = if ty.to_string() == "& str" { quote!(String) } else { ty };
+
+
+
+    // step 3: generate a default value for the const
+
+    let re_int_type = Regex::new(r"^[iu]([0-9]+|size)$").unwrap();
+    let re_float_type = Regex::new(r"^f[0-9]$").unwrap();
+    let re_bool_type = Regex::new(r"^bool$").unwrap();
+
+    let mut v_init = if re_int_type.is_match(&ty.to_string()) {
+        quote!{ ::bevy_hotedit::Value::Int(0) }
+    } else if re_float_type.is_match(&ty.to_string()) {
+        quote!{ ::bevy_hotedit::Value::Float(0.0) }
+    } else if re_bool_type.is_match(&ty.to_string()) {
+        quote!{ ::bevy_hotedit::Value::Boolean(false) }
+    } else {
+        quote!{ ::bevy_hotedit::Value::String("".to_string()) }
     };
 
 
+    // step 4: lookup the value from the toml file, so we can auto-return that
+    // if we're in release mode. Write a panic into the macro if it's not found
+    // (but don't panic on compile).
+
+    let ident_str = ident.to_string();
+
+    let release_value = match util::lookup_from_file(&ident.to_string(), &path) {
+        Some(v) => {
+            let (v, conversion) = match v {
+                util::Value::Int(i) => { (quote!{ #i }, quote!{ #i as #ty }) }
+                util::Value::Float(f) => { (quote!{ #f }, quote!{ #f as #ty }) }
+                util::Value::Boolean(b) => { (quote!{ #b }, quote!{ #b as #ty }) }
+                util::Value::String(s) => { (quote!{ #s }, quote!{ #s.to_string() }) }
+            };
+
+            v_init = quote!{ ::bevy_hotedit::Value::from(#v) };
+
+            conversion
+        }
+        None => quote!{
+            panic!("{} not found in toml file", #ident_str);
+        }
+    };
+
+
+    // step 5: return a function with the debug / release switch and the value.
+
+    let registered_bool = format_ident!("{}_REGISTERED", ident.to_string());
+
     let new_item: TokenStream = quote! { 
+        static mut #registered_bool: bool = false;
         #[inline]
         #[allow(non_snake_case)]
-        fn #iden() -> #ty {
+        fn #ident() -> #ty {
             // either return the const value (release build) 
             // or look it up from the toml (debug build)
-            if !cfg!(debug_assertions) { #value_release } else { #value_debug }
+            if cfg!(debug_assertions) { 
+                unsafe { // maybe look into some way to avoid unsafe later?
+                         // As far as they go, it's a pretty safe unsafe. Still,
+                         // given how it's completely avoidable, might be nice
+                         // to have the library completely safe.
+                    if !#registered_bool {
+                        #registered_bool = true;
+
+                        ::bevy_hotedit::HotVariable {
+                            name: #ident_str.to_string(),
+                            line_num: #line_num,
+                            value: #v_init,
+                        }.register();
+                    }
+                }
+
+                #ty::from( ::bevy_hotedit::lookup(#ident_str).unwrap() )
+            } else {
+                #release_value
+            }
         }
     }.into();
 
-    // println!("new_item: \"{}\"", new_item.to_string());
-
     return new_item;
-
-}
-
-
-// dumb trick, this won't work soon. No way to do enums or anything cool.
-// Still it'll work for the moment.
-fn parse_value(line: &str) -> Value {
-    let value = line.split("=").skip(1).next().unwrap().split(";").next().unwrap().trim();
-    format!("test = {}\n", value).parse::<Value>().unwrap()["test"].clone()
 }
 

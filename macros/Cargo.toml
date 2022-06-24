@@ -7,7 +7,9 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
+bevy_hotedit_util = { path = "../util" }
 syn = "1.0"
 quote = "1.0"
 toml = "0.5"
 proc-macro2 = "1.0"
+regex = "1"

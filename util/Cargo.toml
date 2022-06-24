@@ -1,0 +1,9 @@
+# crazy that this is somehow the minimum amount of crates for this to work.
+[package]
+name = "bevy_hotedit_util"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+toml = "0.5"
+duplicate = "0.4.0"

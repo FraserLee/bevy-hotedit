@@ -30,15 +30,19 @@ test with `cargo test -- --test-threads=1` from project root.
  - [x] auto-write consts to toml
      - [x] auto-gen non-existent file
 
+ - [x] rewrite - pure serialization (de-serialize to retrieve value both in
+                 debug and release) without any other weird formats or hacky
+                 representations
+
  - [ ] local webpage to edit consts
      - [x] serve webpage from thread
      - [x] auto-open on startup in browser
-     - [ ] basic HTML
+     - [x] basic HTML
      - [ ] gen html by items
      - [ ] macro-parameters to set input types (min, max, slider, etc)
      - [ ] css
 
- - [ ] increase support for all primitives, enums, strings.
+ - [ ] support enums
      - [ ] tests
 
  - [ ] tagged refresh systems
@@ -51,8 +55,9 @@ test with `cargo test -- --test-threads=1` from project root.
 
  - [ ] publish crate
 
- - [ ] rewrite - pure serialization (de-serialize to retrieve value both in
-                 debug and release) without any other weird formats or hacky
-                 representations (possibly miniserde?)
 
  - [ ] mouse paralax code snippet behind (juice)
+
+ - [ ] html start-bit only without any hot values
+
+ - [ ] initial html-load from file, write to file after.
