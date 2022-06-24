@@ -10,7 +10,7 @@ use toml::{ self, Value, value::Table };
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] extern crate rocket;
-use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
+use rocket::form::{ Form, Contextual, FromForm, Context };
 use rocket_dyn_templates::{ Template, context };
 
 
@@ -98,22 +98,12 @@ pub fn lookup(ident: &str) -> Value {
 
 
 
-/*
-<form action="/" method="post">
-    <input type="text" placeholder="foo (string)"
-        name="foo" id="foo" value="" />
-    <input type="number" placeholder="bar (number)"
-        name="bar" id="bar" value="" />
-    <input type="checkbox" placeholder="baz (bool)"
-        name="baz" id="baz" value="" />
-</form>
-*/
-
 #[derive(Debug, FromForm)]
 struct Submission<'v> {
     foo: &'v str,
     bar: i32,
-    baz: bool,
+    baz: f32,
+    qux: bool,
 }
 
 
@@ -122,19 +112,20 @@ struct Submission<'v> {
 
 #[get("/")]
 fn index() -> Template {
-    Template::render("base", context! {
-        title: env!("CARGO_PKG_NAME"),
-    })
+    Template::render("base", &Context::default())
+    // context! {
+        // title: env!("CARGO_PKG_NAME"),
+    // })
 }
-
-
 
 #[post("/", data = "<form>")]
 fn submit<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
-    dbg!(form);
-    Template::render("base", context! {
-        title: env!("CARGO_PKG_NAME"),
-    })
+    if let Some(ref submission) = form.value {
+        println!("SUBMISSION VALID, {:?}", submission);
+    }
+    dbg!(&form);
+
+    Template::render("base", &form.context)
 }
 
 

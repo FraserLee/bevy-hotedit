@@ -55,3 +55,4 @@ test with `cargo test -- --test-threads=1` from project root.
                  debug and release) without any other weird formats or hacky
                  representations (possibly miniserde?)
 
+ - [ ] mouse paralax code snippet behind (juice)

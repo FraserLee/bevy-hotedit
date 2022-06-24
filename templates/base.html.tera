@@ -1,3 +1,8 @@
+{% import "macros" as m %}
+{% raw %}
+{% endraw %}
+
+
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -58,9 +63,57 @@
             form {
                 display: flex;
                 flex-direction: column;
-                align-items: center;
+                align-items: left;
                 margin: 1.5rem 0;
             }
+
+            .field {
+                display: flex;
+                flex-direction: column;
+                align-items: left;
+                margin: 0.5rem 0;
+            }
+            .field.checkbox {
+                flex-direction: row;
+            }
+
+            input {
+                border-radius: 0.2rem;
+                border: 0px solid;
+                padding: 0.1rem 0.2rem;
+                left: 0; right: 0;
+                font-size: 1rem;
+                font-family: "Inconsolata", monospace;
+                color: inherit;
+                background-color: #326377;
+            }
+
+            input[type="checkbox" i] {
+                width: 1.1rem;
+                height: 1.1rem;
+                margin: 0 0.5rem;
+                accent-color: #326377;
+                color-scheme: dark;
+            }
+
+            input.error {
+                border: 1.5px solid #f2545b;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+            p.error {
+                left: 0; right: 0;
+                border-radius: 0 0 0.2rem 0.2rem;
+                padding: 0.05rem 0.1rem;
+                margin-top: -2px;
+                z-index: -1;
+
+                font-family: "Inconsolata", monospace;
+                background-color: #f2545b;
+                color: #19323c;
+            }
+
+
 
 
         </style>
@@ -68,7 +121,7 @@
     <body>
         <div id="content-outer">
             <div>
-                <h1>{{ title }}</h1>
+                <h1>{# title #}</h1>
                 <p> Welcome to <u>HotEdit</u>. Add the <code>#[hot]</code> macro
                     to one of your consts, and it'll be editable here in real-time.
                 </p>
@@ -92,15 +145,53 @@
 
 
                 <form action="/" method="post">
-                    <input type="text" placeholder="foo (string)"
-                        name="foo" id="foo" value="" />
-                    <input type="number" placeholder="bar (number)"
-                        name="bar" id="bar" value="" />
-                    <input type="checkbox" placeholder="baz (bool)"
-                        name="baz" id="baz" value="" />
-                    <input type="submit" value="Submit" />
+                    {{ m::input(label="Foo (String)", type="text", name="foo") }}
+                    {{ m::input(label="Bar (int)", type="number", name="bar") }}
+                    {{ m::input(label="Baz (float)", type="number", name="baz") }}
+                    {{ m::input(label="Qux (bool)", type="checkbox", name="qux") }}
+                    <!-- <input placeholder="baz (float)" pattern="[0-9]*[.]?[0-9]+" -->
                 </form>
             </div>
         </div>
     </body>
+    <script>
+        var form = document.querySelector('form');
+        var body = document.querySelector('body');
+
+        function submit() {
+
+            form.submit();
+
+            // flash the background of the body a slightly 
+            // different colour for 0.15 seconds
+            var bg = body.style.backgroundColor;
+            body.style.backgroundColor = '#162B34';
+            setTimeout(function() {
+                body.style.backgroundColor = bg;
+            }, 150);
+        }
+
+        // submit form whenever the cursor leaves an input field
+        form.addEventListener('focusout', function(e) {
+            e.preventDefault();
+            submit();
+        });
+
+        // submit form whenever the enter key is pressed
+        form.addEventListener('keydown', function(e) {
+            if (e.keyCode === 13) {
+                e.preventDefault();
+                submit();
+            }
+        });
+
+        // submit form whenever a checkbox is clicked
+        form.addEventListener('click', function(e) {
+            if (e.target.type === 'checkbox') {
+                submit();
+            }
+        });
+
+    </script>
 </html>
+
