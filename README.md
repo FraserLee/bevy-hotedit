@@ -39,8 +39,12 @@ test with `cargo test -- --test-threads=1` from project root.
      - [x] auto-open on startup in browser
      - [x] basic HTML
      - [ ] gen html by items
+     - [ ] live-set items on forum response
+     - [ ] write toml on forum response
      - [ ] macro-parameters to set input types (min, max, slider, etc)
      - [ ] css
+     - [ ] open in root-pos
+     - [ ] disable rocket output
 
  - [ ] support enums
      - [ ] tests
