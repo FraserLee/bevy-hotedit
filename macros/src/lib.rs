@@ -14,7 +14,11 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     let line_num = Span::call_site().start().line;
 
-    let path = format!("{}/src/hotedit-values.toml", std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let values_path = format!("{}/src/hotedit-values.toml", 
+        std::env::var("CARGO_MANIFEST_DIR").unwrap());
+
+    let debug_path = format!("{}debug.toml", 
+        std::file!().replace("macros/src/lib.rs", ""));
     
 
     // step 1: parse the line to pull out the const name and type
@@ -48,7 +52,7 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
                 syn::Lit::Bool(b) => b.value().to_string(),
                 _ => panic!("unsupported literal type for const \"{}\"", ident)
             };
-            util::write_to_file(&ident.to_string(), &value, &path);
+            util::write_to_file(&ident.to_string(), &value, &values_path);
         }
 
         (quote!{#ident}, quote!{#ty})
@@ -69,32 +73,41 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     let ty = if ty.to_string() == "& str" { quote!(String) } else { ty };
 
-
-
     // step 3: generate a default value for the const
 
     let re_int_type = Regex::new(r"^[iu]([0-9]+|size)$").unwrap();
     let re_float_type = Regex::new(r"^f[0-9]$").unwrap();
     let re_bool_type = Regex::new(r"^bool$").unwrap();
 
-    let mut v_init = if re_int_type.is_match(&ty.to_string()) {
-        quote!{ ::bevy_hotedit::Value::Int(0) }
+    let (mut v_init, v_type) = if re_int_type.is_match(&ty.to_string()) {
+        (quote!{ ::bevy_hotedit::Value::Int(0) }, "Int")
     } else if re_float_type.is_match(&ty.to_string()) {
-        quote!{ ::bevy_hotedit::Value::Float(0.0) }
+        (quote!{ ::bevy_hotedit::Value::Float(0.0) }, "Float")
     } else if re_bool_type.is_match(&ty.to_string()) {
-        quote!{ ::bevy_hotedit::Value::Boolean(false) }
+        (quote!{ ::bevy_hotedit::Value::Boolean(false) }, "Boolean")
     } else {
-        quote!{ ::bevy_hotedit::Value::String("".to_string()) }
+        (quote!{ ::bevy_hotedit::Value::String("".to_string()) }, "String")
     };
 
 
-    // step 4: lookup the value from the toml file, so we can auto-return that
+    // step 4: register the const (along with contextual info) in the 
+    // hotedit-debug.toml file, so we can build the webpage.
+
+
+    util::write_to_file(
+        &format!("{}.type", ident.to_string()),
+        &format!("\"{}\"", v_type),
+        &debug_path
+    );
+
+
+    // step 5: lookup the value from the toml file, so we can auto-return that
     // if we're in release mode. Write a panic into the macro if it's not found
     // (but don't panic on compile).
 
     let ident_str = ident.to_string();
 
-    let release_value = match util::lookup_from_file(&ident.to_string(), &path) {
+    let release_value = match util::lookup_from_file(&ident.to_string(), &values_path) {
         Some(v) => {
             let (v, conversion) = match v {
                 util::Value::Int(i) => { (quote!{ #i }, quote!{ #i as #ty }) }
@@ -113,7 +126,7 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
     };
 
 
-    // step 5: return a function with the debug / release switch and the value.
+    // step 6: return a function with the debug / release switch and the value.
 
     let registered_bool = format_ident!("{}_REGISTERED", ident.to_string());
 

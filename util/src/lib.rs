@@ -59,12 +59,22 @@ impl From<bool> for Value { fn from(b: bool) -> Self { Value::Boolean(b) } }
 impl From<String> for Value { fn from(s: String) -> Self { Value::String(s) } }
 impl From<&str> for Value { fn from(s: &str) -> Self { Value::String(s.to_string()) } }
 
+impl From<Value> for toml::Value { fn from(v: Value) -> Self { match v { 
+    Value::Float(f) => toml::Value::Float(f),
+    Value::Int(i) => toml::Value::Integer(i),
+    Value::String(s) => toml::Value::String(s),
+    Value::Boolean(b) => toml::Value::Boolean(b),
+} } }
 
+
+
+
+
+
+use std::io::prelude::*;
 
 pub fn lookup_from_file(ident: &str, path: &str) -> Option<Value> {
-    let file = std::fs::read_to_string(path).unwrap();
-
-    let file_t: toml::value::Table = toml::from_str(&file).unwrap();
+    let file_t = read_toml(path);
 
     if !file_t.contains_key(ident) { return None; }
 
@@ -80,21 +90,37 @@ pub fn lookup_from_file(ident: &str, path: &str) -> Option<Value> {
 }
 
 pub fn write_to_file(ident: &str, value: &str, path: &str) {
-    let file = std::fs::read_to_string(&path).unwrap();
+    let mut file_t = read_toml(path);
 
-    let mut file_t: toml::value::Table = toml::from_str(&file).unwrap();
-
+    // file needs to be parsed twice, so arbitrary ident and value strings
+    // (like a.b = [1,2,3]) can be added.
+    
     file_t.remove(ident);
 
-    std::fs::write(&path, 
-        format!("{}\n{} = {}\n", 
-            toml::to_string_pretty(&file_t).unwrap(),
-            ident, 
-            value).as_bytes()
-    ).unwrap();
+    file_t = parse_toml(&format!("{} = {}\n\n\n\n{}", 
+        ident,
+        value,
+        toml::to_string_pretty(&file_t).unwrap()
+    ));
+
+    std::fs::write(path, toml::to_string_pretty(&file_t).unwrap().as_bytes()).unwrap();
 }
 
+fn read_toml(path: &str) -> toml::value::Table {
+    let mut file = std::fs::OpenOptions::new().read(true).write(true).create(true).open(path).unwrap();
+    let mut buffer = String::new();
+    file.read_to_string(&mut buffer).unwrap();
 
+    parse_toml(&buffer)
+}
+
+fn parse_toml(toml: &str) -> toml::value::Table {
+    let file_t: Result<toml::value::Table, _> = toml::from_str(toml);
+
+    if file_t.is_err() { panic!("Error parsing, {} is not a valid toml file", toml); }
+
+    file_t.unwrap()
+}
 
 
 
