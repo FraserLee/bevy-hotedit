@@ -8,7 +8,7 @@ use bevy::prelude::*;
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] extern crate rocket;
-use rocket::form::{ Form, Contextual, FromForm, /* Context */ };
+use rocket::form::{ Form, Contextual, FromForm };
 use rocket_dyn_templates::{ Template, context };
 
 
@@ -18,20 +18,6 @@ use bevy_hotedit_util as util;
 pub use util::Value;
 
 
-
-
-// struct used to init a hotvar, consumed with `.register()`
-pub struct HotVar {
-    pub name: String,
-    pub init_value: Value,
-}
-
-impl HotVar {
-    pub fn register(self) { // consumes self, registering it in the global map
-        let mut values = VALUES.lock().unwrap();
-        values.insert(self.name.clone(), self.init_value);
-    }
-}
 
 
 lazy_static! {
@@ -163,6 +149,10 @@ struct Submission<'v> {
 
 #[post("/", data = "<form>")]
 fn post<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
+
+    let info = INFO.lock().unwrap();
+    let info = info.clone();
+
     if let Some(ref s) = form.value {
         let mut file_t = util::read_toml(CONFIG_PATH.to_str().unwrap());
         let mut values = VALUES.lock().unwrap();
@@ -182,13 +172,12 @@ fn post<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
             values.insert(k.clone(), Value::String(v.to_string()));
         }
 
-        // false bools don't get sent, so we need to check for them
-        for (k, v) in values.iter_mut() {
-            dbg!("bbbbbbbb", &k, &v);
-            if matches!(v, Value::Boolean(_)) {
+        // false bools don't get sent, so we need to check for them another way
+        for (k, v) in info.iter() {
+            if v["type"].as_str().unwrap() == "bool" {
                 let b = *s.bool.get(k).unwrap_or(&false);
-                *v = Value::Boolean(b);
                 file_t.insert(k.clone(), toml::Value::Boolean(b));
+                values.insert(k.clone(), Value::Boolean(b));
             }
         }
 
@@ -199,8 +188,6 @@ fn post<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
         ).unwrap();
     }
 
-    let info = INFO.lock().unwrap();
-    let info = info.clone();
 
     let c = context! {
         title: std::env::var("CARGO_PKG_NAME").unwrap(),

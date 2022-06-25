@@ -1,7 +1,7 @@
 #![feature(proc_macro_span)]
 
 use proc_macro::{ TokenStream, Span };
-use quote::{ quote, format_ident };
+use quote::quote;
 use regex::Regex;
 
 use bevy_hotedit_util as util;
@@ -71,22 +71,15 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     let ty = if ty.to_string() == "& str" { quote!(String) } else { ty };
 
-    // step 3: generate a default value for the const
-
     let re_int_type = Regex::new(r"^[iu]([0-9]+|size)$").unwrap();
     let re_float_type = Regex::new(r"^f[0-9]+$").unwrap();
     let re_bool_type = Regex::new(r"^bool$").unwrap();
     
+    let v_type = if re_int_type.is_match(&ty.to_string()) { "int" }
+    else if re_float_type.is_match(&ty.to_string()) { "float" }
+    else if re_bool_type.is_match(&ty.to_string()) { "bool" }
+    else { "string" };
 
-    let (mut v_init, v_type) = if re_int_type.is_match(&ty.to_string()) {
-        (quote!{ ::bevy_hotedit::Value::Int(0) }, "int")
-    } else if re_float_type.is_match(&ty.to_string()) {
-        (quote!{ ::bevy_hotedit::Value::Float(0.0) }, "float")
-    } else if re_bool_type.is_match(&ty.to_string()) {
-        (quote!{ ::bevy_hotedit::Value::Boolean(false) }, "bool")
-    } else {
-        (quote!{ ::bevy_hotedit::Value::String("".to_string()) }, "string")
-    };
 
 
     // step 4: register the const (along with contextual info) in the 
@@ -109,16 +102,12 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     let release_value = match util::lookup_from_file(&ident.to_string(), &values_path) {
         Some(v) => {
-            let (v, conversion) = match v {
-                util::Value::Int(i) => { (quote!{ #i }, quote!{ #i as #ty }) }
-                util::Value::Float(f) => { (quote!{ #f }, quote!{ #f as #ty }) }
-                util::Value::Boolean(b) => { (quote!{ #b }, quote!{ #b as #ty }) }
-                util::Value::String(s) => { (quote!{ #s }, quote!{ #s.to_string() }) }
-            };
-
-            v_init = quote!{ ::bevy_hotedit::Value::from(#v) };
-
-            conversion
+            match v {
+                util::Value::Int(i) => { quote!{ #i as #ty } }
+                util::Value::Float(f) => { quote!{ #f as #ty } }
+                util::Value::Boolean(b) => { quote!{ #b as #ty } }
+                util::Value::String(s) => { quote!{ #s.to_string() } }
+            }
         }
         None => quote!{
             panic!("{} not found in toml file", #ident_str);
@@ -128,30 +117,13 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     // step 6: return a function with the debug / release switch and the value.
 
-    let registered_bool = format_ident!("{}_REGISTERED", ident.to_string());
-
     let new_item: TokenStream = quote! { 
-        static mut #registered_bool: bool = false;
         #[inline]
         #[allow(non_snake_case)]
         fn #ident() -> #ty {
             // either return the const value (release build) 
             // or look it up from the toml (debug build)
             if cfg!(debug_assertions) { 
-                unsafe { // maybe look into some way to avoid unsafe later?
-                         // As far as they go, it's a pretty safe unsafe. Still,
-                         // given how it's completely avoidable, might be nice
-                         // to have the library completely safe.
-                    if !#registered_bool {
-                        #registered_bool = true;
-
-                        ::bevy_hotedit::HotVar {
-                            name: #ident_str.to_string(),
-                            init_value: #v_init,
-                        }.register();
-                    }
-                }
-
                 #ty::from( ::bevy_hotedit::lookup(#ident_str).unwrap() )
             } else {
                 #release_value
