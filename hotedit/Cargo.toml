@@ -12,6 +12,7 @@ lazy_static = "1.4.0" # probably don't need this, look into removing later.
 
 rocket = "0.5.0-rc.2"
 open = "3.0.1"
+serde = { version = "1.0", features = ["derive"] }
 
 [dependencies.rocket_dyn_templates]
 version = "0.1.0-rc.2"

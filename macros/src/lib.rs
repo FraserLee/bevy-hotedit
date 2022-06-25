@@ -8,6 +8,7 @@ use bevy_hotedit_util as util;
 
 #[proc_macro_attribute]
 pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
+    let debug_path = util::UTIL_PATH.replace("util/src/lib.rs", "debug.toml");
 
     // find the path to the file "hotedit-values.toml" from the "src/" 
     // directory of the project using this macro.
@@ -17,8 +18,6 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
     let values_path = format!("{}/src/hotedit-values.toml", 
         std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
-    let debug_path = std::file!().replace("macros/src/lib.rs", "debug.toml");
-    
 
     // step 1: parse the line to pull out the const name and type
 
@@ -75,15 +74,16 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
     // step 3: generate a default value for the const
 
     let re_int_type = Regex::new(r"^[iu]([0-9]+|size)$").unwrap();
-    let re_float_type = Regex::new(r"^f[0-9]$").unwrap();
+    let re_float_type = Regex::new(r"^f[0-9]+$").unwrap();
     let re_bool_type = Regex::new(r"^bool$").unwrap();
+    
 
     let (mut v_init, v_type) = if re_int_type.is_match(&ty.to_string()) {
         (quote!{ ::bevy_hotedit::Value::Int(0) }, "int")
     } else if re_float_type.is_match(&ty.to_string()) {
         (quote!{ ::bevy_hotedit::Value::Float(0.0) }, "float")
     } else if re_bool_type.is_match(&ty.to_string()) {
-        (quote!{ ::bevy_hotedit::Value::Boolean(false) }, "boolean")
+        (quote!{ ::bevy_hotedit::Value::Boolean(false) }, "bool")
     } else {
         (quote!{ ::bevy_hotedit::Value::String("".to_string()) }, "string")
     };
@@ -94,8 +94,8 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
 
 
     util::write_to_file(
-        &format!("{}.type", ident.to_string()),
-        &format!("\"{}\"", v_type),
+        &ident.to_string(),
+        &format!("{{ line = {}, type = \"{}\" }}", line_num, v_type),
         &debug_path
     );
 
@@ -105,7 +105,7 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
     // (but don't panic on compile).
 
     let ident_str = ident.to_string();
-    let ty_str = ty.to_string();
+    // let ty_str = ty.to_string();
 
     let release_value = match util::lookup_from_file(&ident.to_string(), &values_path) {
         Some(v) => {
@@ -148,10 +148,6 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
                         ::bevy_hotedit::HotVar {
                             name: #ident_str.to_string(),
                             init_value: #v_init,
-                            info: ::bevy_hotedit::VarInfo {
-                                line_num: #line_num,
-                                ty: #ty_str.to_string(),
-                            },
                         }.register();
                     }
                 }

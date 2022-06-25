@@ -13,7 +13,7 @@
            {% if type == "checkbox" %}
                {% if name in f.values %}
                    {% set field_values = f.values | get(key=name) %}
-                   {% if field_values is containing("on") %}
+                   {% if field_values is containing(true) or field_values is containing("on") %}
                        checked
                    {% endif %}
                {% endif %}
@@ -22,12 +22,12 @@
            {% endif %}
            {% if name in f.errors %} class="error" {% endif %}
     >
+    </input>
     {%- if name in f.errors -%}
         {% set field_errors = f.errors | get(key=name) %}
         {% for error in field_errors %}
             <p class="error">{{ error.msg }}</p>
         {% endfor %}
     {%- endif -%}
-    </input>
 </div>
 {% endmacro input %}

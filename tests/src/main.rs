@@ -10,6 +10,7 @@ use bevy_hotedit::*;
 
 
 
+
 #[hot] const INT_CONST1: usize;
 #[hot] const INT_CONST2: i8;
 #[hot] const INT_CONST3: u32;
@@ -38,6 +39,8 @@ use bevy_hotedit::*;
 #[test] fn bool_const_load() {
     assert!(BOOL_CONST());
 }
+
+
 
 
 

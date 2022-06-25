@@ -20,6 +20,9 @@ impl Value {
 }
 
 
+pub const UTIL_PATH: &str = std::file!();
+
+
 #[duplicate_item( 
     int_type; 
     [ i8 ]; [ i16 ]; [ i32 ]; [ i64 ]; [ isize ];
@@ -121,6 +124,14 @@ fn parse_toml(toml: &str) -> toml::value::Table {
 
     file_t.unwrap()
 }
+
+
+
+
+
+
+
+    
 
 
 

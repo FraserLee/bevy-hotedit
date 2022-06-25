@@ -24,21 +24,12 @@ pub use util::Value;
 pub struct HotVar {
     pub name: String,
     pub init_value: Value,
-    pub info: VarInfo,
-}
-
-pub struct VarInfo {
-    pub line_num: usize,
-    pub ty: String,
 }
 
 impl HotVar {
     pub fn register(self) { // consumes self, registering it in the global map
         let mut values = VALUES.lock().unwrap();
         values.insert(self.name.clone(), self.init_value);
-
-        let mut info = INFO.lock().unwrap();
-        info.insert(self.name, self.info);
     }
 }
 
@@ -53,18 +44,27 @@ lazy_static! {
     static ref VALUES: Mutex<HashMap<String, Value>> = Mutex::new(HashMap::new());
 
     // hashmap with info about the declared #[hot] places
-    static ref INFO: Mutex<HashMap<String, VarInfo>> = Mutex::new(HashMap::new());
+    static ref INFO: Mutex<HashMap<String, toml::Value>> = Mutex::new(HashMap::new());
 }
 
 
+// try to lookup the value in the global map.
 pub fn lookup(ident: &str) -> Option<Value> {
-    // try to lookup the value in the global map.
     match VALUES.lock().unwrap().get(ident) {
         Some(v) => Some(v.clone()),
         None => None,
     }
 }
 
+
+// try to lookup the value in the global map, or if not found look it up in the
+// toml file (useful for populating initial load-values).
+fn lookup_or_file(ident: &str) -> Option<Value> {
+    match lookup(ident) {
+        Some(v) => Some(v),
+        None => util::lookup_from_file(ident, CONFIG_PATH.to_str().unwrap())
+    }
+}
 
 
 
@@ -78,19 +78,35 @@ pub struct HotEditPlugin {
 
 impl Plugin for HotEditPlugin {
     fn build(&self, app: &mut App) {
+        if !cfg!(debug_assertions) { return; }
 
         app.add_startup_system(|| {
             thread::spawn(move || { 
+
+                // load debug.toml into INFO
+                let mut info = INFO.lock().unwrap();
+                let debug_path = util::UTIL_PATH.replace("util/src/lib.rs", "debug.toml");
+                let debug_t = util::read_toml(&debug_path);
+
+                for (k, v) in debug_t.into_iter() { info.insert(k, v); }
+
+                drop(info);
+
+                // create rocket app
                 rocket::async_main(async move {
                     let app = rocket::build()
-                        .mount("/", routes![post, index])
+                        .mount("/", routes![
+                            index,
+                            post, 
+                        ])
                         .attach(Template::fairing());
                     let _ = app.launch().await;
                 });
             });
         });
 
-        if self.auto_open { // open page in default browser
+        // open page in default browser
+        if self.auto_open { 
             open::that("http://localhost:8000").unwrap();
         }
 
@@ -102,38 +118,96 @@ impl Plugin for HotEditPlugin {
 
 #[get("/")]
 fn index() -> Template {
-    Template::render("base", context! {
+    let info = INFO.lock().unwrap();
+    let info = info.clone();
+
+    let mut values = HashMap::<String, toml::Value>::new();
+
+    for (k, field) in info.iter() {
+        let v: toml::Value = lookup_or_file(k).unwrap().into();
+        let v_arr = toml::Value::Array(vec![v]);
+
+
+
+
+        values.insert(
+            format!("{}.{}", field["type"].as_str().unwrap(), k.as_str()),
+            v_arr,
+        );
+    }
+
+    let f = context! {
+        values,
+        errors: HashMap::<String, String>::new(),
+    };
+
+    let c = context! {
         title: std::env::var("CARGO_PKG_NAME").unwrap(),
-        f: context! {
-            values: HashMap::<String, String>::new(),
-            errors: HashMap::<String, String>::new(),
-        },
-    })
+        f,
+        fields: info,
+    };
+    Template::render("base", c)
 }
 
 
 
-#[allow(dead_code)]
+
 #[derive(Debug, FromForm)]
 struct Submission<'v> {
-    int: HashMap<String, i32>,
-    float: HashMap<String, f32>,
+    int: HashMap<String, i64>,
+    float: HashMap<String, f64>,
     bool: HashMap<String, bool>,
     string: HashMap<String, &'v str>,
 }
 
+
 #[post("/", data = "<form>")]
 fn post<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
-    if let Some(ref submission) = form.value {
-        println!("SUBMISSION VALID, {:?}", submission);
-    }
-    // dbg!(&form);
+    if let Some(ref s) = form.value {
+        let mut file_t = util::read_toml(CONFIG_PATH.to_str().unwrap());
+        let mut values = VALUES.lock().unwrap();
 
-    Template::render("base", context! {
+        for (k, v) in s.int.iter() {
+            file_t.insert(k.clone(), toml::Value::Integer(*v));
+            values.insert(k.clone(), Value::Int(*v));
+        }
+
+        for (k, v) in s.float.iter() {
+            file_t.insert(k.clone(), toml::Value::Float(*v));
+            values.insert(k.clone(), Value::Float(*v));
+        }
+
+        for (k, v) in s.string.iter() {
+            file_t.insert(k.clone(), toml::Value::String(v.to_string()));
+            values.insert(k.clone(), Value::String(v.to_string()));
+        }
+
+        // false bools don't get sent, so we need to check for them
+        for (k, v) in values.iter_mut() {
+            dbg!("bbbbbbbb", &k, &v);
+            if matches!(v, Value::Boolean(_)) {
+                let b = *s.bool.get(k).unwrap_or(&false);
+                *v = Value::Boolean(b);
+                file_t.insert(k.clone(), toml::Value::Boolean(b));
+            }
+        }
+
+
+        std::fs::write(
+            CONFIG_PATH.to_str().unwrap(), 
+            toml::to_string_pretty(&file_t).unwrap()
+        ).unwrap();
+    }
+
+    let info = INFO.lock().unwrap();
+    let info = info.clone();
+
+    let c = context! {
         title: std::env::var("CARGO_PKG_NAME").unwrap(),
         f: &form.context,
-    })
+        fields: info,
+    };
+    Template::render("base", c)
 }
-
 
 

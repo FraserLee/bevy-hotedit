@@ -145,11 +145,24 @@
 
 
                 <form action="/" method="post" enctype="multipart/form-data">
-                    {{ m::input(label="Foo (String)", type="text",   name="string.foo") }}
-                    {{ m::input(label="Bar (int)", type="number",    name="int.bar") }}
-                    {{ m::input(label="Baz (float)", type="number",  name="float.baz") }}
-                    {{ m::input(label="Qux (bool)", type="checkbox", name="bool.qux") }}
-                    <!-- [> <input placeholder="baz (float)" pattern="[0-9]*[.]?[0-9]+" <] -->
+                    {% for name, data in fields %}
+                        {% if data.type == "string" %}
+                            {% set type = "text" %}
+                        {% elif data.type == "int" %}
+                            {% set type = "number" %}
+                        {% elif data.type == "float" %}
+                            {% set type = "number" %}
+                        {% else %}
+                            {% set type = "checkbox" %}
+                        {% endif %}
+
+                        {{ m::input(
+                                label = name ~ " (" ~ data.type ~ ", line: " ~ data.line ~ ")",
+                                type = type,
+                                name = data.type ~ "." ~ name
+                            )
+                        }}
+                    {% endfor %}
                 </form>
             </div>
         </div>

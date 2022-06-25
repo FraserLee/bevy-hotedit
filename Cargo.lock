@@ -515,6 +515,7 @@ dependencies = [
  "open",
  "rocket",
  "rocket_dyn_templates",
+ "serde",
  "toml",
 ]
 
