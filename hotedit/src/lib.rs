@@ -8,8 +8,8 @@ use bevy::prelude::*;
 #[macro_use] extern crate lazy_static;
 
 #[macro_use] extern crate rocket;
-use rocket::form::{ Form, Contextual, FromForm, Context };
-use rocket_dyn_templates::{ Template, /* context */ };
+use rocket::form::{ Form, Contextual, FromForm, /* Context */ };
+use rocket_dyn_templates::{ Template, context };
 
 
 
@@ -20,16 +20,25 @@ pub use util::Value;
 
 
 
-pub struct HotVariable {
+// struct used to init a hotvar, consumed with `.register()`
+pub struct HotVar {
     pub name: String,
-    pub line_num: usize,
-    pub value: Value,
+    pub init_value: Value,
+    pub info: VarInfo,
 }
 
-impl HotVariable {
+pub struct VarInfo {
+    pub line_num: usize,
+    pub ty: String,
+}
+
+impl HotVar {
     pub fn register(self) { // consumes self, registering it in the global map
-        let mut hot_vars = HOT_VARS.lock().unwrap();
-        hot_vars.insert(self.name.clone(), self);
+        let mut values = VALUES.lock().unwrap();
+        values.insert(self.name.clone(), self.init_value);
+
+        let mut info = INFO.lock().unwrap();
+        info.insert(self.name, self.info);
     }
 }
 
@@ -40,21 +49,21 @@ lazy_static! {
             PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
             .join("src/hotedit-values.toml");
 
-    // a single table with all #[hot] values
-    static ref HOT_VARS: Mutex<HashMap<String, HotVariable>> = Mutex::new(HashMap::new());
+    // hashmap of all current #[hot] values
+    static ref VALUES: Mutex<HashMap<String, Value>> = Mutex::new(HashMap::new());
+
+    // hashmap with info about the declared #[hot] places
+    static ref INFO: Mutex<HashMap<String, VarInfo>> = Mutex::new(HashMap::new());
 }
 
 
 pub fn lookup(ident: &str) -> Option<Value> {
-    // try to lookup the value in the global map, and if that fails, try to
-    // parse it from the config file. Should both fail, return None.
-    match HOT_VARS.lock().unwrap().get(ident) {
-        Some(var) => Some(var.value.clone()),
-        None => util::lookup_from_file(ident, CONFIG_PATH.to_str().unwrap()),
+    // try to lookup the value in the global map.
+    match VALUES.lock().unwrap().get(ident) {
+        Some(v) => Some(v.clone()),
+        None => None,
     }
 }
-
-
 
 
 
@@ -74,7 +83,7 @@ impl Plugin for HotEditPlugin {
             thread::spawn(move || { 
                 rocket::async_main(async move {
                     let app = rocket::build()
-                        .mount("/", routes![index, submit])
+                        .mount("/", routes![post, index])
                         .attach(Template::fairing());
                     let _ = app.launch().await;
                 });
@@ -91,44 +100,40 @@ impl Plugin for HotEditPlugin {
 
 
 
-
-
-
-
-
-
-
-
-
-
-#[derive(Debug, FromForm)]
-struct Submission<'v> {
-    foo: &'v str,
-    bar: i32,
-    baz: f32,
-    qux: bool,
+#[get("/")]
+fn index() -> Template {
+    Template::render("base", context! {
+        title: std::env::var("CARGO_PKG_NAME").unwrap(),
+        f: context! {
+            values: HashMap::<String, String>::new(),
+            errors: HashMap::<String, String>::new(),
+        },
+    })
 }
 
 
 
-
-
-#[get("/")]
-fn index() -> Template {
-    Template::render("base", &Context::default())
-    // context! {
-        // title: env!("CARGO_PKG_NAME"),
-    // })
+#[allow(dead_code)]
+#[derive(Debug, FromForm)]
+struct Submission<'v> {
+    int: HashMap<String, i32>,
+    float: HashMap<String, f32>,
+    bool: HashMap<String, bool>,
+    string: HashMap<String, &'v str>,
 }
 
 #[post("/", data = "<form>")]
-fn submit<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
+fn post<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
     if let Some(ref submission) = form.value {
         println!("SUBMISSION VALID, {:?}", submission);
     }
-    dbg!(&form);
+    // dbg!(&form);
 
-    Template::render("base", &form.context)
+    Template::render("base", context! {
+        title: std::env::var("CARGO_PKG_NAME").unwrap(),
+        f: &form.context,
+    })
 }
+
 
 

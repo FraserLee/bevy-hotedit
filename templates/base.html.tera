@@ -121,7 +121,7 @@
     <body>
         <div id="content-outer">
             <div>
-                <h1>{# title #}</h1>
+                <h1>{{ title }}</h1>
                 <p> Welcome to <u>HotEdit</u>. Add the <code>#[hot]</code> macro
                     to one of your consts, and it'll be editable here in real-time.
                 </p>
@@ -144,12 +144,12 @@
 
 
 
-                <form action="/" method="post">
-                    {{ m::input(label="Foo (String)", type="text", name="foo") }}
-                    {{ m::input(label="Bar (int)", type="number", name="bar") }}
-                    {{ m::input(label="Baz (float)", type="number", name="baz") }}
-                    {{ m::input(label="Qux (bool)", type="checkbox", name="qux") }}
-                    <!-- <input placeholder="baz (float)" pattern="[0-9]*[.]?[0-9]+" -->
+                <form action="/" method="post" enctype="multipart/form-data">
+                    {{ m::input(label="Foo (String)", type="text",   name="string.foo") }}
+                    {{ m::input(label="Bar (int)", type="number",    name="int.bar") }}
+                    {{ m::input(label="Baz (float)", type="number",  name="float.baz") }}
+                    {{ m::input(label="Qux (bool)", type="checkbox", name="bool.qux") }}
+                    <!-- [> <input placeholder="baz (float)" pattern="[0-9]*[.]?[0-9]+" <] -->
                 </form>
             </div>
         </div>
@@ -163,12 +163,12 @@
             form.submit();
 
             // flash the background of the body a slightly 
-            // different colour for 0.15 seconds
+            // different colour for a short time
             var bg = body.style.backgroundColor;
-            body.style.backgroundColor = '#162B34';
+            body.style.backgroundColor = '#102026';
             setTimeout(function() {
                 body.style.backgroundColor = bg;
-            }, 150);
+            }, 250);
         }
 
         // submit form whenever the cursor leaves an input field

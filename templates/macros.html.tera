@@ -1,6 +1,6 @@
 {% macro value_for(name) %}
-    {%- if name in values -%}
-        {{- values | get(key=name) | first -}}
+    {%- if name in f.values -%}
+        {{- f.values | get(key=name) | first -}}
     {%- endif -%}
 {% endmacro %}
 
@@ -11,8 +11,8 @@
            name="{{ name }}"
            id="{{ name }}"
            {% if type == "checkbox" %}
-               {% if name in values %}
-                   {% set field_values = values | get(key=name) %}
+               {% if name in f.values %}
+                   {% set field_values = f.values | get(key=name) %}
                    {% if field_values is containing("on") %}
                        checked
                    {% endif %}
@@ -20,10 +20,10 @@
            {% else %}
                value='{{ self::value_for(name=name) }}'
            {% endif %}
-           {% if name in errors %} class="error" {% endif %}
+           {% if name in f.errors %} class="error" {% endif %}
     >
-    {%- if name in errors -%}
-        {% set field_errors = errors | get(key=name) %}
+    {%- if name in f.errors -%}
+        {% set field_errors = f.errors | get(key=name) %}
         {% for error in field_errors %}
             <p class="error">{{ error.msg }}</p>
         {% endfor %}

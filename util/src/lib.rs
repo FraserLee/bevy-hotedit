@@ -106,7 +106,7 @@ pub fn write_to_file(ident: &str, value: &str, path: &str) {
     std::fs::write(path, toml::to_string_pretty(&file_t).unwrap().as_bytes()).unwrap();
 }
 
-fn read_toml(path: &str) -> toml::value::Table {
+pub fn read_toml(path: &str) -> toml::value::Table {
     let mut file = std::fs::OpenOptions::new().read(true).write(true).create(true).open(path).unwrap();
     let mut buffer = String::new();
     file.read_to_string(&mut buffer).unwrap();

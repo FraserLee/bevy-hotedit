@@ -17,8 +17,7 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
     let values_path = format!("{}/src/hotedit-values.toml", 
         std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
-    let debug_path = format!("{}debug.toml", 
-        std::file!().replace("macros/src/lib.rs", ""));
+    let debug_path = std::file!().replace("macros/src/lib.rs", "debug.toml");
     
 
     // step 1: parse the line to pull out the const name and type
@@ -80,13 +79,13 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
     let re_bool_type = Regex::new(r"^bool$").unwrap();
 
     let (mut v_init, v_type) = if re_int_type.is_match(&ty.to_string()) {
-        (quote!{ ::bevy_hotedit::Value::Int(0) }, "Int")
+        (quote!{ ::bevy_hotedit::Value::Int(0) }, "int")
     } else if re_float_type.is_match(&ty.to_string()) {
-        (quote!{ ::bevy_hotedit::Value::Float(0.0) }, "Float")
+        (quote!{ ::bevy_hotedit::Value::Float(0.0) }, "float")
     } else if re_bool_type.is_match(&ty.to_string()) {
-        (quote!{ ::bevy_hotedit::Value::Boolean(false) }, "Boolean")
+        (quote!{ ::bevy_hotedit::Value::Boolean(false) }, "boolean")
     } else {
-        (quote!{ ::bevy_hotedit::Value::String("".to_string()) }, "String")
+        (quote!{ ::bevy_hotedit::Value::String("".to_string()) }, "string")
     };
 
 
@@ -106,6 +105,7 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
     // (but don't panic on compile).
 
     let ident_str = ident.to_string();
+    let ty_str = ty.to_string();
 
     let release_value = match util::lookup_from_file(&ident.to_string(), &values_path) {
         Some(v) => {
@@ -145,10 +145,13 @@ pub fn hot(_args: TokenStream, item: TokenStream) -> TokenStream {
                     if !#registered_bool {
                         #registered_bool = true;
 
-                        ::bevy_hotedit::HotVariable {
+                        ::bevy_hotedit::HotVar {
                             name: #ident_str.to_string(),
-                            line_num: #line_num,
-                            value: #v_init,
+                            init_value: #v_init,
+                            info: ::bevy_hotedit::VarInfo {
+                                line_num: #line_num,
+                                ty: #ty_str.to_string(),
+                            },
                         }.register();
                     }
                 }
