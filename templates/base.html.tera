@@ -80,7 +80,7 @@
             input {
                 border-radius: 0.2rem;
                 border: 0px solid;
-                padding: 0.1rem 0.2rem;
+                padding: 0.15rem 0.3rem;
                 left: 0; right: 0;
                 font-size: 1rem;
                 font-family: "Inconsolata", monospace;
@@ -125,24 +125,25 @@
                 <p> Welcome to <u>HotEdit</u>. Add the <code>#[hot]</code> macro
                     to one of your consts, and it'll be editable here in real-time.
                 </p>
-                <p class="bg">* also replace usage of
-                    <code class="bg">CONST_NAME</code> with <br> the function-call 
-                    <code class="bg">CONST_NAME()</code>.
-                </p>
-                <p> If changing the value of a const requires further steps 
-                    (like pushing a new colour to a material), you can add the
-                    <code>#[hot-refresh]</code> macro to a bevy system, and it
-                    will only be called when the value of a const changes.
-                </p>
-                <p> I'm <i>fairly certain</i> I've implemented everything in a 
-                    way that'll have zero runtime cost in a release build. If
-                    you're better at rust than I am, please
-                    <a href="https://github.com/FraserLee/bevy-hotedit">
-                        check out the source</a>!
+                {% set field_count = fields | length %}
+                {% if field_count == 0 %}
+                    <p class="bg">* also replace usage of
+                        <code class="bg">CONST_NAME</code> with <br> the function-call 
+                        <code class="bg">CONST_NAME()</code>.
+                    </p>
+                    <p> If changing the value of a const requires further steps 
+                        (like pushing a new colour to a material), you can add the
+                        <code>#[hot-refresh]</code> macro to a bevy system, and it
+                        will only be called when the value of a const changes.
+                    </p>
+                    <p> I'm <i>fairly certain</i> I've implemented everything in a 
+                        way that'll have zero runtime cost in a release build. If
+                        you're better at rust than I am, please
+                        <a href="https://github.com/FraserLee/bevy-hotedit">
+                            check out the source</a>!
 
-
-
-
+                    </p>
+                {% endif %}
 
                 <form action="/" method="post" enctype="multipart/form-data">
                     {% for name, data in fields %}
@@ -157,7 +158,8 @@
                         {% endif %}
 
                         {{ m::input(
-                                label = name ~ " (" ~ data.type ~ ", line: " ~ data.line ~ ")",
+                                label = name,
+                                sublabel = data.type ~ ", line: " ~ data.line,
                                 type = type,
                                 name = data.type ~ "." ~ name
                             )

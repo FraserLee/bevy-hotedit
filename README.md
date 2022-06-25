@@ -34,34 +34,34 @@ test with `cargo test -- --test-threads=1` from project root.
                  debug and release) without any other weird formats or hacky
                  representations
 
- - [ ] local webpage to edit consts
+ - [x] local webpage to edit consts
      - [x] serve webpage from thread
      - [x] auto-open on startup in browser
      - [x] basic HTML
-     - [ ] gen html by items
-     - [ ] live-set items on forum response
-     - [ ] write toml on forum response
+     - [x] gen html by items
+     - [x] live-set items on forum response
+     - [x] write toml on forum response
      - [ ] macro-parameters to set input types (min, max, slider, etc)
-     - [ ] css
-     - [ ] open in root-pos
+     - [ ] group stuff in-order, sections by adj lines
+     - [x] css
+     - [ ] templates load not affected by run-directory
      - [ ] disable rocket output
+     - [x] html start-bit only without any hot values
+     - [x] initial html-load from file, write to file after.
+
+ - [ ] tagged refresh systems
 
  - [ ] support enums
      - [ ] tests
 
- - [ ] tagged refresh systems
+ - [ ] write readme
 
  - [ ] record video highlighting basic workflow
-
- - [ ] write readme
 
  - [ ] write documentation
 
  - [ ] publish crate
 
-
  - [ ] mouse paralax code snippet behind (juice)
 
- - [ ] html start-bit only without any hot values
 
- - [ ] initial html-load from file, write to file after.

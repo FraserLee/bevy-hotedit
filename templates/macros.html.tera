@@ -4,9 +4,12 @@
     {%- endif -%}
 {% endmacro %}
 
-{% macro input(type, label, name, value="") %}
+{% macro input(type, label, sublabel, name, value="") %}
 <div class="field {{ type }}">
-    <label for="{{ name }}">{{ label }}</label>
+    <label for="{{ name }}">
+        <code>{{ label }}</code>
+        <code class="bg">{{ sublabel }}</code>
+    </label>
     <input type="{{ type }}"
            name="{{ name }}"
            id="{{ name }}"

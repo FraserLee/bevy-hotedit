@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{ Mutex, Once };
 use std::thread;
 
 use bevy::prelude::*;
@@ -12,74 +12,27 @@ use rocket::form::{ Form, Contextual, FromForm };
 use rocket_dyn_templates::{ Template, context };
 
 
+use bevy_hotedit_util as util;
 
 pub use bevy_hotedit_macros::*;
-use bevy_hotedit_util as util;
 pub use util::Value;
-
-
-
-
-lazy_static! {
-    // the env! macro has some bugs. This works.
-    pub static ref CONFIG_PATH: PathBuf = 
-            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-            .join("src/hotedit-values.toml");
-
-    // hashmap of all current #[hot] values
-    static ref VALUES: Mutex<HashMap<String, Value>> = Mutex::new(HashMap::new());
-
-    // hashmap with info about the declared #[hot] places
-    static ref INFO: Mutex<HashMap<String, toml::Value>> = Mutex::new(HashMap::new());
-}
-
-use std::sync::Once;
-static LOAD_VALUES: Once = Once::new();
-
-// try to lookup the value in the global map.
-pub fn lookup(ident: &str) -> Option<Value> {
-    LOAD_VALUES.call_once(|| {
-
-        let mut values = VALUES.lock().unwrap();
-        util::read_toml(CONFIG_PATH.to_str().unwrap())
-            .into_iter()
-            .for_each(|(k, v)| {
-            values.insert(k, v.into());
-        });
-
-    });
-
-
-
-
-    match VALUES.lock().unwrap().get(ident) {
-        Some(v) => Some(v.clone()),
-        None => None,
-    }
-}
-
-
-// try to lookup the value in the global map, or if not found look it up in the
-// toml file (useful for populating initial load-values).
-fn lookup_or_file(ident: &str) -> Option<Value> {
-    match lookup(ident) {
-        Some(v) => Some(v),
-        None => util::lookup_from_file(ident, CONFIG_PATH.to_str().unwrap())
-    }
-}
-
-
 
 
 
 
 
 pub struct HotEditPlugin {
-    pub auto_open: bool,
+    pub auto_open: bool, // if true, automatically open a web browser with the hotedit page
 }
+
 
 impl Plugin for HotEditPlugin {
     fn build(&self, app: &mut App) {
+
+        // I've tried to make things such that, given a small amount of 
+        // compiler optimization, a release build will be literally identical 
+        // to one with consts specified in code.
+
         if !cfg!(debug_assertions) { return; }
 
         app.add_startup_system(|| {
@@ -108,12 +61,52 @@ impl Plugin for HotEditPlugin {
         });
 
         // open page in default browser
-        if self.auto_open { 
-            open::that("http://localhost:8000").unwrap();
-        }
+        if self.auto_open { open::that("http://localhost:8000").unwrap(); }
 
     }
 }
+
+
+
+lazy_static! {
+    // the env! macro has some weird behaviour. This works.
+    pub static ref CONFIG_PATH: PathBuf = 
+            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
+            .join("src/hotedit-values.toml");
+
+
+    // hashmap of all current #[hot] values
+    static ref VALUES: Mutex<HashMap<String, Value>> = Mutex::new(HashMap::new());
+
+    // hashmap with info about the declared #[hot] places
+    static ref INFO: Mutex<HashMap<String, toml::Value>> = Mutex::new(HashMap::new());
+}
+
+
+
+
+static LOAD_VALUES: Once = Once::new();
+
+// search for a value in the global hashmap, initializing by reading 
+// hotedit-values.toml if it's not already loaded.
+pub fn lookup(ident: &str) -> Option<Value> {
+    LOAD_VALUES.call_once(|| {
+        let mut values = VALUES.lock().unwrap();
+        util::read_toml(CONFIG_PATH.to_str().unwrap())
+            .into_iter()
+            .for_each(|(k, v)| {
+            values.insert(k, v.into());
+        });
+    });
+
+    match VALUES.lock().unwrap().get(ident) {
+        Some(v) => Some(v.clone()),
+        None => None,
+    }
+}
+
+
+
 
 
 
@@ -123,14 +116,13 @@ fn index() -> Template {
     let info = INFO.lock().unwrap();
     let info = info.clone();
 
+    // populate a hashmap with the current values, in a format that will be
+    // serialized identically to a correct form response.
     let mut values = HashMap::<String, toml::Value>::new();
 
     for (k, field) in info.iter() {
-        let v: toml::Value = lookup_or_file(k).unwrap().into();
+        let v: toml::Value = lookup(k).unwrap().into();
         let v_arr = toml::Value::Array(vec![v]);
-
-
-
 
         values.insert(
             format!("{}.{}", field["type"].as_str().unwrap(), k.as_str()),
@@ -170,6 +162,12 @@ fn post<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
     let info = info.clone();
 
     if let Some(ref s) = form.value {
+
+        // this is called whenever values are submitted, provided they're valid.
+
+        // update the global hashmap with the new values
+        // and write them to the config file.
+
         let mut file_t = util::read_toml(CONFIG_PATH.to_str().unwrap());
         let mut values = VALUES.lock().unwrap();
 
@@ -197,13 +195,12 @@ fn post<'r>(form: Form<Contextual<'r, Submission<'r>>>) -> Template {
             }
         }
 
-
         std::fs::write(
             CONFIG_PATH.to_str().unwrap(), 
             toml::to_string_pretty(&file_t).unwrap()
         ).unwrap();
-    }
 
+    }
 
     let c = context! {
         title: std::env::var("CARGO_PKG_NAME").unwrap(),

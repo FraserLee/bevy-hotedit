@@ -1,6 +1,13 @@
 use duplicate::duplicate_item;
 use std::io::prelude::*;
 
+pub const UTIL_PATH: &str = std::file!();
+
+// this needs to have generic-enough conversions to make the procedural macro
+// not be a nightmare, hence the rather ugly mess of boilerplate here.
+
+// at least pain in this section lets the rest stay clean.
+
 #[derive(Clone, Debug)]
 pub enum Value {
     Float(f64),
@@ -19,9 +26,6 @@ impl Value {
         }
     }
 }
-
-
-pub const UTIL_PATH: &str = std::file!();
 
 
 #[duplicate_item( 
@@ -57,9 +61,12 @@ impl From<Value> for String { fn from(v: Value) -> Self { match v {
     [ u8 ]; [ u16 ]; [ u32 ]; [ u64 ]; [ usize ];
 )]
 impl From<int_type> for Value { fn from(i: int_type) -> Self { Value::Int(i as i64) } }
+
 #[duplicate_item( float_type ; [ f32 ]; [ f64 ]; )]
 impl From<float_type> for Value { fn from(f: float_type) -> Self { Value::Float(f as f64) } }
+
 impl From<bool> for Value { fn from(b: bool) -> Self { Value::Boolean(b) } }
+
 impl From<String> for Value { fn from(s: String) -> Self { Value::String(s) } }
 impl From<&str> for Value { fn from(s: &str) -> Self { Value::String(s.to_string()) } }
 
@@ -82,34 +89,33 @@ impl From<toml::Value> for Value { fn from(v: toml::Value) -> Self { match v {
 
 
 
+// read a field from a toml file
 pub fn lookup_from_file(ident: &str, path: &str) -> Option<Value> {
     let file_t = read_toml(path);
 
     if !file_t.contains_key(ident) { return None; }
 
-    let value = file_t.get(ident).unwrap();
+    let value_t = file_t.get(ident);
 
-    match value {
-        toml::Value::Float(f) => Some(Value::Float(*f)),
-        toml::Value::Integer(i) => Some(Value::Int(*i)),
-        toml::Value::String(s) => Some(Value::String(s.clone())),
-        toml::Value::Boolean(b) => Some(Value::Boolean(*b)),
-        _ => None,
+    match value_t {
+        None => None,
+        Some(v) => Some(v.clone().into())
     }
 }
 
+// write a field to a toml file
 pub fn write_to_file(ident: &str, value: &str, path: &str) {
     let mut file_t = read_toml(path);
 
     // file needs to be parsed twice, so arbitrary ident and value strings
-    // (like a.b = [1,2,3]) can be added.
+    // (like a.b = [1,2,3]) can be written to the correct format.
     
     file_t.remove(ident);
 
     file_t = parse_toml(&format!("{} = {}\n\n\n\n{}", 
         ident,
         value,
-        toml::to_string_pretty(&file_t).unwrap()
+        toml::to_string(&file_t).unwrap()
     ));
 
     std::fs::write(path, toml::to_string_pretty(&file_t).unwrap().as_bytes()).unwrap();
@@ -134,10 +140,6 @@ fn parse_toml(toml: &str) -> toml::value::Table {
 
 
 
-
-
-
-    
 
 
 
