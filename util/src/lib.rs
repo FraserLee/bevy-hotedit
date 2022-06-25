@@ -1,4 +1,5 @@
 use duplicate::duplicate_item;
+use std::io::prelude::*;
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -69,12 +70,17 @@ impl From<Value> for toml::Value { fn from(v: Value) -> Self { match v {
     Value::Boolean(b) => toml::Value::Boolean(b),
 } } }
 
+impl From<toml::Value> for Value { fn from(v: toml::Value) -> Self { match v { 
+    toml::Value::Float(f) => Value::Float(f),
+    toml::Value::Integer(i) => Value::Int(i),
+    toml::Value::String(s) => Value::String(s),
+    toml::Value::Boolean(b) => Value::Boolean(b),
+    _ => panic!("toml::Value not fully supported, got {:?}", v),
+} } }
 
 
 
 
-
-use std::io::prelude::*;
 
 pub fn lookup_from_file(ident: &str, path: &str) -> Option<Value> {
     let file_t = read_toml(path);

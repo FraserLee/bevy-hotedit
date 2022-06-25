@@ -33,9 +33,25 @@ lazy_static! {
     static ref INFO: Mutex<HashMap<String, toml::Value>> = Mutex::new(HashMap::new());
 }
 
+use std::sync::Once;
+static LOAD_VALUES: Once = Once::new();
 
 // try to lookup the value in the global map.
 pub fn lookup(ident: &str) -> Option<Value> {
+    LOAD_VALUES.call_once(|| {
+
+        let mut values = VALUES.lock().unwrap();
+        util::read_toml(CONFIG_PATH.to_str().unwrap())
+            .into_iter()
+            .for_each(|(k, v)| {
+            values.insert(k, v.into());
+        });
+
+    });
+
+
+
+
     match VALUES.lock().unwrap().get(ident) {
         Some(v) => Some(v.clone()),
         None => None,
