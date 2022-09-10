@@ -120,7 +120,7 @@
     </head>
     <body>
         <div id="content-outer">
-            <div>
+            <div style="width: 100%;">
                 <h1>{{ title }}</h1>
                 <p> Welcome to <u>HotEdit</u>. Add the <code>#[hot]</code> macro
                     to one of your consts, and it'll be editable here in real-time.
